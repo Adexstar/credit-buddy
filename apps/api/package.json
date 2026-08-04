@@ -1,0 +1,24 @@
+{
+  "name": "@ai-credit-bank/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@ai-credit-bank/shared": "workspace:*",
+    "cors": "^2.8.0",
+    "dotenv": "^16.4.0",
+    "express": "^4.21.1",
+    "helmet": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.0",
+    "@types/express": "^5.0.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.5.4"
+  }
+}

@@ -2,13 +2,8 @@
 
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api-client';
+import type { User } from '@/types';
 
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-  planType: 'free' | 'premium' | 'enterprise';
-}
 
 interface AuthContextType {
   user: User | null;

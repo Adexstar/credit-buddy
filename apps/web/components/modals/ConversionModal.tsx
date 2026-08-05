@@ -2,17 +2,15 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api-client';
+import { PROVIDERS, type CreditBucket } from '@/types';
 
 interface ConversionModalProps {
-  bucket: {
-    id: string;
-    app_name: string;
-    remaining_balance: number;
-  } | null;
+  bucket: Pick<CreditBucket, 'id' | 'app_name' | 'remaining_balance'> | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
+
 
 export function ConversionModal({ bucket, isOpen, onClose, onSuccess }: ConversionModalProps) {
   const [targetApp, setTargetApp] = useState('');
@@ -69,11 +67,13 @@ export function ConversionModal({ bucket, isOpen, onClose, onSuccess }: Conversi
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select target app...</option>
-            <option value="openai">OpenAI</option>
-            <option value="claude">Claude</option>
-            <option value="midjourney">Midjourney</option>
-            <option value="replicate">Replicate</option>
+            {PROVIDERS.map((provider) => (
+              <option key={provider.id} value={provider.id}>
+                {provider.name}
+              </option>
+            ))}
           </select>
+
         </div>
 
         <div className="mb-4">

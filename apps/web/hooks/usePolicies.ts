@@ -1,23 +1,9 @@
 import { useState, useCallback } from 'react';
 import { api } from '@/lib/api-client';
+import type { Policy } from '@/types';
 
-export interface Policy {
-  id: string;
-  app_id: string;
-  app_name: string;
-  policy_name: string;
-  rollover_percentage: number;
-  max_rollover_cap: number | null;
-  override_expiry_days: number | null;
-  peak_restricted: boolean;
-  allowed_hours: { start: number; end: number } | null;
-  auto_convert_on_expiry: boolean;
-  convert_to_app_id: string | null;
-  conversion_rate: number | null;
-  warn_at_percentage: number;
-  notify_channels: string[];
-  is_active: boolean;
-}
+export type { Policy };
+
 
 export function usePolicies() {
   const [policies, setPolicies] = useState<Policy[]>([]);

@@ -1,14 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import type { Activity } from '@/types';
 
-interface Activity {
-  type: string;
-  message: string;
-  app_name: string;
-  timestamp: string;
-  amount?: number;
-}
 
 interface ActivityItemProps {
   activity: Activity;

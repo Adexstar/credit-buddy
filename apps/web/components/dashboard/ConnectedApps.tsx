@@ -1,15 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import type { App } from '@/types';
 
-interface App {
-  id: string;
-  name: string;
-  icon_url: string;
-  sync_status: 'healthy' | 'stale' | 'error' | 'never';
-  credits: number;
-  last_sync: string;
-}
 
 interface AppCardProps {
   app: App;

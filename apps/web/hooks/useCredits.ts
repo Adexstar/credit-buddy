@@ -1,49 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { api } from '@/lib/api-client';
+import type { Activity, App, CreditBucket, Stats, UsageData } from '@/types';
 
-interface Bucket {
-  id: string;
-  source_type: string;
-  app_name: string;
-  app_id: string;
-  remaining_balance: number;
-  original_balance: number;
-  soft_expiry: string;
-  peak_restricted: boolean;
-}
-
-interface App {
-  id: string;
-  name: string;
-  icon_url: string;
-  sync_status: 'healthy' | 'stale' | 'error' | 'never';
-  credits: number;
-  last_sync: string;
-}
-
-interface Stats {
-  totalBalance: number;
-  hasPolicies: boolean;
-  hasProxyUsage: boolean;
-}
-
-interface Activity {
-  type: string;
-  message: string;
-  app_name: string;
-  timestamp: string;
-  amount?: number;
-}
 
 export function useCredits() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [apps, setApps] = useState<App[]>([]);
-  const [buckets, setBuckets] = useState<Bucket[]>([]);
-  const [usageData, setUsageData] = useState<{
-    labels: string[];
-    used: number[];
-    added: number[];
-  } | null>(null);
+  const [buckets, setBuckets] = useState<CreditBucket[]>([]);
+  const [usageData, setUsageData] = useState<UsageData | null>(null);
+
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,9 +35,14 @@ export function useCredits() {
     }
   }, []);
 
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
   const refreshData = useCallback(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
 
   return {
     stats,

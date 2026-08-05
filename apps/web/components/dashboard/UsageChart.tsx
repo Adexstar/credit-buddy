@@ -3,20 +3,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { Chart, registerables } from 'chart.js';
 import { motion } from 'framer-motion';
+import type { TimeRange, UsageData } from '@/types';
 
 Chart.register(...registerables);
 
-interface UsageData {
-  labels: string[];
-  used: number[];
-  added: number[];
-}
-
 interface UsageChartProps {
   data?: UsageData;
-  timeRange: 'week' | 'month' | 'quarter';
-  onTimeRangeChange: (range: 'week' | 'month' | 'quarter') => void;
+  timeRange: TimeRange;
+  onTimeRangeChange: (range: TimeRange) => void;
 }
+
 
 export function UsageChart({ data, timeRange, onTimeRangeChange }: UsageChartProps) {
   const chartRef = useRef<HTMLCanvasElement>(null);

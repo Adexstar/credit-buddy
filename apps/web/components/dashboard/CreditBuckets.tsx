@@ -1,16 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import type { CreditBucket } from '@/types';
 
-interface CreditBucket {
-  id: string;
-  source_type: string;
-  app_name: string;
-  remaining_balance: number;
-  original_balance: number;
-  soft_expiry: string;
-  peak_restricted: boolean;
-}
 
 interface CreditBucketCardProps {
   bucket: CreditBucket;

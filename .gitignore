@@ -1,6 +1,13 @@
 node_modules
-pnpm-lock.yaml
-.next
+.DS_Store
 dist
+dist-ssr
+*.local
 .env
-coverage
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+__unconfig*
+todos.json

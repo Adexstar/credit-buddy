@@ -70,7 +70,7 @@ export const PROVIDERS = [
   { id: "huggingface", name: "Hugging Face", initials: "HF", docs: "https://huggingface.co/settings/tokens" },
 ] as const;
 
-const now = new Date("2026-08-03T09:00:00Z").getTime();
+const now = Date.now();
 const hours = (h: number) => new Date(now - h * 3600_000).toISOString();
 const days = (d: number) => new Date(now + d * 86400_000).toISOString();
 

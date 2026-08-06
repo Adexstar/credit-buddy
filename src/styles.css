@@ -1,17 +1,71 @@
-
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
+@theme {
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-vault-bg: oklch(0.19 0.024 220);
+  --color-vault-panel: oklch(0.223 0.026 220);
+  --color-vault-raised: oklch(0.253 0.028 220);
+  --color-vault-border: oklch(0.3 0.03 220);
+  --color-vault-foreground: oklch(0.96 0.008 210);
+  --color-vault-muted: oklch(0.7 0.02 215);
+  --color-vault-faint: oklch(0.56 0.02 215);
+  --color-vault-teal: oklch(0.79 0.13 174);
+  --color-vault-teal-deep: oklch(0.63 0.12 175);
+  --color-vault-amber: oklch(0.82 0.13 85);
+  --color-vault-danger: oklch(0.67 0.19 18);
 }
 
 html,
-body,
-#app {
-  min-height: 100%;
-}
-
 body {
-  margin: 0;
+  background-color: var(--color-vault-bg);
+  color: var(--color-vault-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+@utility vault-panel {
+  background-color: var(--color-vault-panel);
+  border: 1px solid var(--color-vault-border);
+  border-radius: 1rem;
+}
+
+@utility vault-raised {
+  background-color: var(--color-vault-raised);
+  border: 1px solid var(--color-vault-border);
+  border-radius: 0.75rem;
+}
+
+@utility vault-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--color-vault-border) 45%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--color-vault-border) 45%, transparent) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+@utility vault-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-vault-border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

@@ -1,52 +1,114 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { AppShell, DemoDataPill } from "@/components/layout/AppShell";
 import { Panel } from "@/components/dashboard/primitives";
-import { api, type Policy } from "@/lib/api";
+import { PolicyProvider, usePolicies } from "@/context/PolicyContext";
+import { PolicyCard } from "@/components/policies/PolicyCard";
+import { PolicyEmptyState, PolicyFilters } from "@/components/policies/PolicyFilters";
+import { PolicyWizard } from "@/components/policies/PolicyWizard";
+import { PolicyDeleteConfirm, PolicySimulator } from "@/components/policies/PolicySimulator";
+import { PrimaryButton } from "@/components/policies/ui";
+import type { Policy } from "@/lib/policies";
 import { routingRules } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/policies")({
-  component: PoliciesPage,
+  component: PoliciesRoute,
   head: () => ({
     meta: [
       { title: "Automation policies — Credit Bank" },
       {
         name: "description",
-        content: "Rules that convert, route and protect AI credits before they expire or blow a spend ceiling.",
+        content: "Create, edit and test rules that convert, route and cap AI credits before they expire.",
       },
       { property: "og:title", content: "Automation policies — Credit Bank" },
       { property: "og:description", content: "Rules that protect credits before they expire." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
 });
 
+function PoliciesRoute() {
+  return (
+    <PolicyProvider>
+      <PoliciesPage />
+    </PolicyProvider>
+  );
+}
+
 function PoliciesPage() {
-  const [policies, setPolicies] = useState<Policy[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    policies,
+    filtered,
+    loading,
+    searchQuery,
+    setSearchQuery,
+    filterType,
+    setFilterType,
+    selectedPolicy,
+    isEditorOpen,
+    openEditor,
+    closeEditor,
+    pendingDelete,
+    requestDelete,
+    createPolicy,
+    updatePolicy,
+    deletePolicy,
+    togglePolicy,
+    reorderPolicies,
+  } = usePolicies();
+
+  const [simulating, setSimulating] = useState<Policy | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    void api.getPolicies().then((p) => {
-      setPolicies(p);
-      setLoading(false);
-    });
-  }, []);
+    const onKey = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+      if (meta && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        openEditor(null);
+      }
+      if (meta && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openEditor]);
 
-  const toggle = async (policy: Policy) => {
-    const next = !policy.active;
-    setPolicies((prev) => prev.map((p) => (p.id === policy.id ? { ...p, active: next } : p)));
-    await api.togglePolicy(policy.id, next);
-    toast.success(`${policy.name} ${next ? "enabled" : "disabled"}`);
+  const drop = () => {
+    if (!dragId || !overId || dragId === overId) {
+      setDragId(null);
+      setOverId(null);
+      return;
+    }
+    const order = policies.map((p) => p.id);
+    const from = order.indexOf(dragId);
+    const to = order.indexOf(overId);
+    order.splice(to, 0, ...order.splice(from, 1));
+    void reorderPolicies(order);
+    setDragId(null);
+    setOverId(null);
   };
 
-  const activeCount = policies.filter((p) => p.active).length;
+  const activeCount = policies.filter((p) => p.isActive).length;
 
   return (
     <AppShell
       title="Automation policies"
       subtitle="Rules that protect credits before they expire"
-      actions={<DemoDataPill />}
+      actions={
+        <>
+          <DemoDataPill />
+          <PrimaryButton onClick={() => openEditor(null)}>
+            <Plus size={16} /> Add new policy
+          </PrimaryButton>
+        </>
+      }
     >
       {loading ? (
         <div className="flex h-64 items-center justify-center">
@@ -62,41 +124,38 @@ function PoliciesPage() {
               </span>
             }
           >
-            <div className="grid gap-4 lg:grid-cols-2">
-              {policies.map((policy) => (
-                <div key={policy.id} className="vault-raised p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="font-display text-base font-semibold text-vault-foreground">{policy.name}</h3>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={policy.active}
-                      aria-label={`Toggle ${policy.name}`}
-                      onClick={() => toggle(policy)}
-                      className={`relative h-6 w-11 shrink-0 rounded-full transition ${
-                        policy.active ? "bg-vault-teal" : "bg-vault-panel border border-vault-border"
-                      }`}
-                    >
-                      <span
-                        className={`absolute top-1/2 size-4.5 -translate-y-1/2 rounded-full bg-vault-foreground transition-all ${
-                          policy.active ? "left-[1.4rem]" : "left-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-vault-muted">{policy.description}</p>
-                  <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-xs">
-                    <div>
-                      <dt className="text-vault-faint">Scope</dt>
-                      <dd className="mt-0.5 text-vault-foreground">{policy.scope}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-vault-faint">Trigger</dt>
-                      <dd className="vault-mono mt-0.5 text-vault-foreground">{policy.trigger}</dd>
-                    </div>
-                  </dl>
+            <div className="space-y-5">
+              <PolicyFilters
+                searchQuery={searchQuery}
+                onSearch={setSearchQuery}
+                filterType={filterType}
+                onFilter={setFilterType}
+                searchRef={searchRef}
+              />
+
+              {filtered.length === 0 ? (
+                <PolicyEmptyState
+                  onCreate={() => openEditor(null)}
+                  filtered={policies.length > 0}
+                />
+              ) : (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {filtered.map((policy) => (
+                    <PolicyCard
+                      key={policy.id}
+                      policy={policy}
+                      dragging={dragId === policy.id}
+                      onEdit={() => openEditor(policy)}
+                      onDelete={() => requestDelete(policy)}
+                      onToggle={() => void togglePolicy(policy.id)}
+                      onTest={() => setSimulating(policy)}
+                      onDragStart={() => setDragId(policy.id)}
+                      onDragOver={() => setOverId(policy.id)}
+                      onDrop={drop}
+                    />
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </Panel>
 
@@ -111,6 +170,31 @@ function PoliciesPage() {
             </ol>
           </Panel>
         </>
+      )}
+
+      {isEditorOpen && (
+        <PolicyWizard
+          policy={selectedPolicy}
+          onClose={closeEditor}
+          onSave={async (draft) => {
+            if (selectedPolicy) await updatePolicy(selectedPolicy.id, draft);
+            else await createPolicy(draft);
+          }}
+          onTest={(draft) => setSimulating(draft)}
+        />
+      )}
+
+      {simulating && <PolicySimulator policy={simulating} onClose={() => setSimulating(null)} />}
+
+      {pendingDelete && (
+        <PolicyDeleteConfirm
+          policy={pendingDelete}
+          onCancel={() => requestDelete(null)}
+          onConfirm={async () => {
+            await deletePolicy(pendingDelete.id);
+            requestDelete(null);
+          }}
+        />
       )}
     </AppShell>
   );

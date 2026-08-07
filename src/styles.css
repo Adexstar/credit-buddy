@@ -16,6 +16,9 @@
   --color-vault-teal-deep: oklch(0.63 0.12 175);
   --color-vault-amber: oklch(0.82 0.13 85);
   --color-vault-danger: oklch(0.67 0.19 18);
+  --color-vault-blue: oklch(0.74 0.13 245);
+  --color-vault-purple: oklch(0.75 0.14 300);
+  --color-vault-green: oklch(0.78 0.16 150);
 }
 
 html,

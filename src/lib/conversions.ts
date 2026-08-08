@@ -1,4 +1,5 @@
-import { mockActivities, mockBuckets, type CreditBucket } from "./mock-data";
+import { mockBuckets, type CreditBucket } from "./mock-data";
+import { api } from "./api";
 
 export const PLATFORM_FEE = 0.1;
 export const MIN_CONVERSION = 10;
@@ -135,7 +136,7 @@ export const conversionApi = {
       amount,
     };
 
-    mockActivities.unshift({
+    api.addActivity({
       id: `act-conv-${Date.now()}`,
       kind: "conversion",
       message: `Converted ${amount.toFixed(2)} ${bucket.appName} credits into ${q.net.toFixed(2)} ${targetAppName} credits`,

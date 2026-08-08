@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { AppShell, DemoDataPill } from "@/components/layout/AppShell";
 import { ActivityList, BucketCard, Panel } from "@/components/dashboard/primitives";
 import { UsageChart } from "@/components/dashboard/UsageChart";
-import { api, type Activity, type CreditBucket, type Stats, type TimeRange, type UsageData } from "@/lib/api";
+import { CreditConversionModal } from "@/components/conversion/CreditConversionModal";
+import { api, type Activity, type ConnectedApp, type CreditBucket, type Stats, type TimeRange, type UsageData } from "@/lib/api";
 
 export const Route = createFileRoute("/credits")({
   component: CreditsPage,
@@ -29,13 +29,21 @@ function CreditsPage() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [range, setRange] = useState<TimeRange>("7d");
   const [appFilter, setAppFilter] = useState("all");
+  const [apps, setApps] = useState<ConnectedApp[]>([]);
+  const [convertBucketId, setConvertBucketId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const [s, b, act] = await Promise.all([api.getStats(), api.getBuckets(), api.getActivity()]);
+    const [s, b, act, a] = await Promise.all([
+      api.getStats(),
+      api.getBuckets(),
+      api.getActivity(),
+      api.getApps(),
+    ]);
     setStats(s);
     setBuckets(b);
     setActivities(act);
+    setApps(a);
     setLoading(false);
   }, []);
 
@@ -95,7 +103,7 @@ function CreditsPage() {
                 <BucketCard
                   key={bucket.id}
                   bucket={bucket}
-                  onConvert={() => toast.info(`Conversion queued for ${bucket.appName} ${bucket.sourceType}`)}
+                  onConvert={() => setConvertBucketId(bucket.id)}
                 />
               ))}
             </div>
@@ -106,6 +114,15 @@ function CreditsPage() {
           <Panel title="Recent activity">
             <ActivityList activities={activities} />
           </Panel>
+
+          <CreditConversionModal
+            isOpen={convertBucketId !== null}
+            onClose={() => setConvertBucketId(null)}
+            buckets={buckets}
+            apps={apps}
+            initialBucketId={convertBucketId ?? undefined}
+            onConverted={() => void load()}
+          />
         </>
       )}
     </AppShell>

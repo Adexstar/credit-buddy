@@ -14,6 +14,7 @@ import {
 } from "@/components/dashboard/primitives";
 import { UsageChart } from "@/components/dashboard/UsageChart";
 import { ConnectAppModal } from "@/components/dashboard/ConnectAppModal";
+import { CreditConversionModal } from "@/components/conversion/CreditConversionModal";
 import { api, type Activity, type ConnectedApp, type CreditBucket, type Stats, type TimeRange, type UsageData } from "@/lib/api";
 import { mockUser } from "@/lib/mock-data";
 
@@ -42,6 +43,7 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [convertBucketId, setConvertBucketId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const [s, a, b, act] = await Promise.all([
@@ -156,7 +158,7 @@ function DashboardPage() {
                     <BucketCard
                       key={bucket.id}
                       bucket={bucket}
-                      onConvert={() => toast.info(`Conversion queued for ${bucket.appName} ${bucket.sourceType}`)}
+                      onConvert={() => setConvertBucketId(bucket.id)}
                     />
                   ))}
                 </div>
@@ -178,6 +180,16 @@ function DashboardPage() {
           </p>
         </>
       )}
+
+      <CreditConversionModal
+        isOpen={convertBucketId !== null}
+        onClose={() => setConvertBucketId(null)}
+        buckets={buckets}
+        apps={apps}
+        initialBucketId={convertBucketId ?? undefined}
+        onConverted={() => void load()}
+        onConnectApp={() => setModalOpen(true)}
+      />
 
       <ConnectAppModal
         isOpen={modalOpen}

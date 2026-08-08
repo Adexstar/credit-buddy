@@ -53,6 +53,12 @@ function computeStats(): Stats {
 export const api = {
   usingMockData: !API_URL,
 
+  /** Prepend a locally generated activity entry (used by the mock conversion flow). */
+  addActivity(activity: Activity) {
+    localActivities = [activity, ...localActivities];
+  },
+
+
   async getProfile(): Promise<UserProfile> {
     if (!API_URL) return mockUser;
     return request<UserProfile>("/auth/me");

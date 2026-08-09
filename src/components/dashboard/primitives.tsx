@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
-import { ArrowRight, Check, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowRight, Check, History, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { SyncStatusBadge } from "./SyncStatusBadge";
+import { SyncProgressBar, Spinner } from "./SyncProgressBar";
+import { relativeTime, type SyncUiStatus } from "@/lib/sync";
 import type { Activity, ConnectedApp, CreditBucket } from "@/lib/api";
+
 
 export function Panel({
   title,
@@ -72,35 +76,84 @@ export function StatCard({
   );
 }
 
-const statusStyles: Record<ConnectedApp["syncStatus"], { label: string; className: string }> = {
-  healthy: { label: "Synced", className: "border-vault-teal/30 bg-vault-teal/10 text-vault-teal" },
-  stale: { label: "Stale sync", className: "border-vault-amber/30 bg-vault-amber/10 text-vault-amber" },
-  error: { label: "Sync error", className: "border-vault-danger/30 bg-vault-danger/10 text-vault-danger" },
-  never: { label: "Not synced", className: "border-vault-border bg-vault-raised text-vault-faint" },
-};
-
-export function AppRow({ app }: { app: ConnectedApp }) {
-  const status = statusStyles[app.syncStatus];
+export function AppRow({
+  app,
+  isSyncing = false,
+  onSync,
+  onHistory,
+  errorMessage,
+}: {
+  app: ConnectedApp;
+  isSyncing?: boolean;
+  onSync?: () => void;
+  onHistory?: () => void;
+  errorMessage?: string;
+}) {
+  const status: SyncUiStatus = isSyncing ? "syncing" : app.syncStatus;
   return (
-    <div className="vault-raised flex items-center gap-4 p-4">
-      <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-vault-teal/10 font-display text-sm font-semibold text-vault-teal">
-        {app.initials}
-      </div>
-      <div className="min-w-0">
-        <h3 className="font-display text-base font-semibold text-vault-foreground">{app.name}</h3>
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-          <span className={`rounded-full border px-2 py-0.5 ${status.className}`}>{status.label}</span>
-          <span className="vault-mono text-vault-muted">{app.credits.toFixed(2)} credits</span>
-          {app.lastSync && (
-            <span className="vault-mono text-vault-faint">
-              · last sync {new Date(app.lastSync).toLocaleString()}
-            </span>
-          )}
+    <div
+      tabIndex={onSync ? 0 : -1}
+      onKeyDown={(e) => {
+        if (!onSync) return;
+        if (e.key.toLowerCase() === "r" && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          onSync();
+        }
+      }}
+      className={`vault-raised p-4 outline-none transition focus-visible:border-vault-teal/50 ${
+        isSyncing ? "animate-pulse border-vault-blue/40" : ""
+      }`}
+    >
+      <div className="flex items-center gap-4">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-vault-teal/10 font-display text-sm font-semibold text-vault-teal">
+          {app.initials}
         </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-base font-semibold text-vault-foreground">{app.name}</h3>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <SyncStatusBadge status={status} />
+            <span className="vault-mono text-vault-muted">{app.credits.toFixed(2)} credits</span>
+            {app.lastSync && (
+              <span className="vault-mono text-vault-faint">· synced {relativeTime(app.lastSync)}</span>
+            )}
+            {onHistory && (
+              <button
+                type="button"
+                onClick={onHistory}
+                className="flex items-center gap-1 text-vault-teal transition hover:opacity-80"
+              >
+                <History size={12} />
+                History
+              </button>
+            )}
+          </div>
+        </div>
+        {onSync && (
+          <button
+            type="button"
+            onClick={onSync}
+            disabled={isSyncing}
+            aria-label={`Sync ${app.name} credits`}
+            title={isSyncing ? "Syncing…" : "Sync now"}
+            className="shrink-0 rounded-lg border border-vault-border bg-vault-panel p-2 text-vault-muted transition hover:border-vault-teal/40 hover:text-vault-teal disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSyncing ? <Spinner /> : <RefreshCw size={15} />}
+          </button>
+        )}
       </div>
+      {isSyncing && <SyncProgressBar />}
+      {!isSyncing && errorMessage && (
+        <p className="mt-2 text-xs text-vault-danger">{errorMessage} — click sync to retry.</p>
+      )}
+      {!isSyncing && app.lastSync && (
+        <p className="vault-mono mt-2 text-xs text-vault-faint">
+          Last sync: {new Date(app.lastSync).toLocaleString()}
+        </p>
+      )}
     </div>
   );
 }
+
 
 function expiryTone(softExpiry: string) {
   const days = (new Date(softExpiry).getTime() - Date.now()) / 86400_000;

@@ -14,6 +14,9 @@ import {
 } from "@/components/dashboard/primitives";
 import { UsageChart } from "@/components/dashboard/UsageChart";
 import { ConnectAppModal } from "@/components/dashboard/ConnectAppModal";
+import { BatchSyncButton } from "@/components/dashboard/BatchSyncButton";
+import { SyncHistoryModal } from "@/components/dashboard/SyncHistory";
+import { useSync } from "@/hooks/useSync";
 import { CreditConversionModal } from "@/components/conversion/CreditConversionModal";
 import { api, type Activity, type ConnectedApp, type CreditBucket, type Stats, type TimeRange, type UsageData } from "@/lib/api";
 import { mockUser } from "@/lib/mock-data";
@@ -44,6 +47,7 @@ function DashboardPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [convertBucketId, setConvertBucketId] = useState<string | null>(null);
+  const [historyApp, setHistoryApp] = useState<ConnectedApp | null>(null);
 
   const load = useCallback(async () => {
     const [s, a, b, act] = await Promise.all([
@@ -62,6 +66,8 @@ function DashboardPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const { syncApp, syncingApps, errors } = useSync(load);
 
   useEffect(() => {
     void api.getUsage(range).then(setUsage);
@@ -88,6 +94,7 @@ function DashboardPage() {
             {refreshing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
             Refresh
           </button>
+          <BatchSyncButton apps={apps} onSync={syncApp} />
           <DemoDataPill />
         </>
       }
@@ -147,7 +154,14 @@ function DashboardPage() {
               <Panel title="Connected apps" action={<ManageLink to="/apps">Manage</ManageLink>}>
                 <div className="space-y-3">
                   {apps.map((app) => (
-                    <AppRow key={app.id} app={app} />
+                    <AppRow
+                      key={app.id}
+                      app={app}
+                      isSyncing={Boolean(syncingApps[app.id])}
+                      errorMessage={errors[app.id]}
+                      onSync={() => void syncApp(app.id, app.name)}
+                      onHistory={() => setHistoryApp(app)}
+                    />
                   ))}
                 </div>
               </Panel>
@@ -179,6 +193,10 @@ function DashboardPage() {
               : "Live data from your backend API."}
           </p>
         </>
+      )}
+
+      {historyApp && (
+        <SyncHistoryModal appId={historyApp.id} appName={historyApp.name} onClose={() => setHistoryApp(null)} />
       )}
 
       <CreditConversionModal

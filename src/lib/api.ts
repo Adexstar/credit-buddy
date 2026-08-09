@@ -16,8 +16,15 @@ import {
   type UsageData,
   type UserProfile,
 } from "./mock-data";
+import {
+  getSyncHistory as readSyncHistory,
+  runMockSync,
+  type SyncHistoryEntry,
+  type SyncResult,
+} from "./sync";
 
 const API_URL = import.meta.env["VITE_API_URL"] as string | undefined;
+
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -168,6 +175,47 @@ export const api = {
       body: JSON.stringify({ provider: providerId, api_key: apiKey, app_name: name }),
     });
   },
+
+  async syncApp(appId: string): Promise<SyncResult> {
+    if (!API_URL) {
+      const app = localApps.find((a) => a.id === appId);
+      if (!app) {
+        return { success: false, appId, appName: appId, message: "No connection found for this app" };
+      }
+      const result = await runMockSync(app);
+      if (result.success) {
+        localApps = localApps.map((a) =>
+          a.id === appId
+            ? { ...a, credits: result.balance ?? a.credits, lastSync: result.lastSync ?? a.lastSync, syncStatus: "healthy" }
+            : a,
+        );
+        localActivities = [
+          {
+            id: `act-sync-${Date.now()}`,
+            kind: "sync",
+            message: `${app.name} sync — ${result.message.toLowerCase()}`,
+            appName: app.name,
+            timestamp: new Date().toISOString(),
+            ...(result.difference ? { amount: result.difference } : {}),
+          },
+          ...localActivities,
+        ];
+      } else {
+        localApps = localApps.map((a) => (a.id === appId ? { ...a, syncStatus: "error" } : a));
+      }
+      return result;
+    }
+    return request<SyncResult>(`/sync/${appId}`, { method: "POST" });
+  },
+
+  async getSyncHistory(appId?: string): Promise<SyncHistoryEntry[]> {
+    if (!API_URL) {
+      await wait(400);
+      return readSyncHistory(appId);
+    }
+    return request<SyncHistoryEntry[]>(appId ? `/sync/${appId}/history` : "/sync/history");
+  },
 };
+
 
 export type { Activity, ConnectedApp, CreditBucket, Policy, Stats, TimeRange, UsageData, UserProfile };

@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
-import { ArrowRight, Check, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowRight, Check, History, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { SyncStatusBadge } from "./SyncStatusBadge";
+import { SyncProgressBar, Spinner } from "./SyncProgressBar";
+import { relativeTime, type SyncUiStatus } from "@/lib/sync";
 import type { Activity, ConnectedApp, CreditBucket } from "@/lib/api";
+
 
 export function Panel({
   title,

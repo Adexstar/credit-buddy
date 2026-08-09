@@ -4,6 +4,10 @@ import { toast } from "sonner";
 import { Loader2, Plug, Plus } from "lucide-react";
 import { AppShell, DemoDataPill } from "@/components/layout/AppShell";
 import { AppRow, Panel } from "@/components/dashboard/primitives";
+import { BatchSyncButton } from "@/components/dashboard/BatchSyncButton";
+import { SyncHistoryModal } from "@/components/dashboard/SyncHistory";
+import { useSync } from "@/hooks/useSync";
+import { useAutoSync } from "@/hooks/useAutoSync";
 import { ConnectAppModal } from "@/components/dashboard/ConnectAppModal";
 import { api, type ConnectedApp } from "@/lib/api";
 import { PROVIDERS } from "@/lib/mock-data";
@@ -28,11 +32,29 @@ function AppsPage() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [presetProvider, setPresetProvider] = useState<string | undefined>(undefined);
+  const [historyApp, setHistoryApp] = useState<ConnectedApp | null>(null);
 
   const load = useCallback(async () => {
     setApps(await api.getApps());
     setLoading(false);
   }, []);
+
+  const { syncApp, syncingApps, errors, cancelAll } = useSync(load);
+  useAutoSync(apps, syncApp);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "r") {
+        e.preventDefault();
+        void (async () => {
+          for (const app of apps) await syncApp(app.id, app.name);
+        })();
+      }
+      if (e.key === "Escape") cancelAll();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [apps, syncApp, cancelAll]);
 
   useEffect(() => {
     void load();
@@ -49,6 +71,7 @@ function AppsPage() {
       subtitle="Manage your AI provider connections"
       actions={
         <>
+          <BatchSyncButton apps={apps} onSync={syncApp} />
           <button
             type="button"
             onClick={() => openModal(undefined)}
@@ -86,7 +109,14 @@ function AppsPage() {
             ) : (
               <div className="space-y-3">
                 {apps.map((app) => (
-                  <AppRow key={app.id} app={app} />
+                  <AppRow
+                    key={app.id}
+                    app={app}
+                    isSyncing={Boolean(syncingApps[app.id])}
+                    errorMessage={errors[app.id]}
+                    onSync={() => void syncApp(app.id, app.name)}
+                    onHistory={() => setHistoryApp(app)}
+                  />
                 ))}
               </div>
             )}
@@ -115,6 +145,10 @@ function AppsPage() {
             </div>
           </Panel>
         </>
+      )}
+
+      {historyApp && (
+        <SyncHistoryModal appId={historyApp.id} appName={historyApp.name} onClose={() => setHistoryApp(null)} />
       )}
 
       <ConnectAppModal

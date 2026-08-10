@@ -1,130 +1,272 @@
-import { useCallback, useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Coins, Download, LayoutGrid, Plus, Rows3 } from "lucide-react";
 import { AppShell, DemoDataPill } from "@/components/layout/AppShell";
-import { ActivityList, BucketCard, Panel } from "@/components/dashboard/primitives";
+import { Panel } from "@/components/dashboard/primitives";
 import { UsageChart } from "@/components/dashboard/UsageChart";
 import { CreditConversionModal } from "@/components/conversion/CreditConversionModal";
-import { api, type Activity, type ConnectedApp, type CreditBucket, type Stats, type TimeRange, type UsageData } from "@/lib/api";
+import { CreditsFilters } from "@/components/credits/CreditsFilters";
+import { CreditsGrid, CreditsTable } from "@/components/credits/CreditsViews";
+import { CreditsBulkActions } from "@/components/credits/CreditsBulkActions";
+import { CreditsAnalytics } from "@/components/credits/CreditsAnalytics";
+import { CreditsHistory } from "@/components/credits/CreditsHistory";
+import { CreditsEmptyState, CreditsLoadingState } from "@/components/credits/CreditsStates";
+import { AddCreditsModal, BulkConvertModal, ConfirmDeleteModal } from "@/components/credits/CreditsModals";
+import { BucketDetailPanel } from "@/components/credits/BucketDetailPanel";
+import { useCreditsManagement } from "@/hooks/useCreditsManagement";
+import { PROVIDERS } from "@/lib/mock-data";
+import { api, type ConnectedApp, type TimeRange, type UsageData } from "@/lib/api";
+import type { CreditBucket } from "@/lib/credits";
 
 export const Route = createFileRoute("/credits")({
   component: CreditsPage,
   head: () => ({
     meta: [
-      { title: "Credit overview — Credit Bank" },
+      { title: "Credits management — Credit Bank" },
       {
         name: "description",
-        content: "Break down credit buckets by source, expiry and app, with usage trends and recent ledger activity.",
+        content:
+          "Manage every credit bucket: filter by app, status and source, run bulk conversions, add credits and export your ledger to CSV.",
       },
-      { property: "og:title", content: "Credit overview — Credit Bank" },
-      { property: "og:description", content: "Buckets, expiry windows and usage trends across every provider." },
+      { property: "og:title", content: "Credits management — Credit Bank" },
+      { property: "og:description", content: "Filter, sort, convert and export credit buckets across every provider." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
 });
 
+function StatTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="vault-panel p-4">
+      <p className="text-[11px] font-medium tracking-[0.14em] text-vault-faint uppercase">{label}</p>
+      <p className="vault-mono mt-2 text-xl font-semibold text-vault-foreground">{value}</p>
+    </div>
+  );
+}
+
 function CreditsPage() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [buckets, setBuckets] = useState<CreditBucket[]>([]);
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const credits = useCreditsManagement();
+  const [view, setView] = useState<"table" | "grid">("table");
+  const [apps, setApps] = useState<ConnectedApp[]>([]);
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [range, setRange] = useState<TimeRange>("7d");
-  const [appFilter, setAppFilter] = useState("all");
-  const [apps, setApps] = useState<ConnectedApp[]>([]);
+  const [detail, setDetail] = useState<CreditBucket | null>(null);
   const [convertBucketId, setConvertBucketId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    const [s, b, act, a] = await Promise.all([
-      api.getStats(),
-      api.getBuckets(),
-      api.getActivity(),
-      api.getApps(),
-    ]);
-    setStats(s);
-    setBuckets(b);
-    setActivities(act);
-    setApps(a);
-    setLoading(false);
-  }, []);
+  const [showAdd, setShowAdd] = useState(false);
+  const [showBulkConvert, setShowBulkConvert] = useState(false);
+  const [deleteIds, setDeleteIds] = useState<string[] | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void api.getApps().then(setApps);
+  }, []);
 
   useEffect(() => {
     void api.getUsage(range).then(setUsage);
   }, [range]);
 
-  const appNames = ["all", ...Array.from(new Set(buckets.map((b) => b.appName)))];
-  const visible = appFilter === "all" ? buckets : buckets.filter((b) => b.appName === appFilter);
+  const appNames = Array.from(new Set([...PROVIDERS.map((p) => p.name.replace(" (Anthropic)", "")), ...credits.buckets.map((b) => b.appName)]));
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+      const typing = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLSelectElement;
+      if (meta && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        credits.selectAll();
+      } else if (meta && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      } else if (meta && e.key.toLowerCase() === "e") {
+        e.preventDefault();
+        credits.exportCsv();
+      } else if (meta && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        setShowAdd(true);
+      } else if ((e.key === "Delete" || e.key === "Backspace") && !typing && credits.selected.length > 0) {
+        e.preventDefault();
+        setDeleteIds(credits.selected);
+      } else if (e.key === "Escape") {
+        credits.clearSelection();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [credits]);
+
+  const filtersActive =
+    credits.filters.app !== "all" ||
+    credits.filters.status !== "all" ||
+    credits.filters.source !== "all" ||
+    credits.filters.expiry !== "all" ||
+    credits.filters.search !== "";
 
   return (
     <AppShell
-      title="Credit overview"
-      subtitle="Balances, buckets and expiry windows across all apps"
-      actions={<DemoDataPill />}
-    >
-      {loading ? (
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 size={28} className="animate-spin text-vault-teal" />
-        </div>
-      ) : (
-        <>
-          <Panel>
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-medium tracking-[0.14em] text-vault-faint uppercase">Total balance</p>
-                <p className="vault-mono mt-2 text-3xl font-semibold text-vault-foreground">
-                  ${(stats?.totalBalance ?? 0).toFixed(2)}
-                </p>
-              </div>
-              <p className="text-sm text-vault-muted">Across all connected apps</p>
-            </div>
-          </Panel>
-
-          <Panel
-            title="Credit buckets"
-            action={
-              <select
-                value={appFilter}
-                onChange={(e) => setAppFilter(e.target.value)}
-                className="h-9 rounded-lg border border-vault-border bg-vault-raised px-3 text-xs text-vault-foreground outline-none"
-              >
-                {appNames.map((name) => (
-                  <option key={name} value={name}>
-                    {name === "all" ? "All apps" : name}
-                  </option>
-                ))}
-              </select>
-            }
+      title="Credits management"
+      subtitle="Every bucket, with filters, bulk actions and full transaction history"
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <DemoDataPill />
+          <button
+            type="button"
+            onClick={() => credits.exportCsv()}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-vault-border bg-vault-panel px-3 py-2 text-xs text-vault-muted transition hover:text-vault-foreground"
           >
-            <div className="space-y-3">
-              {visible.map((bucket) => (
-                <BucketCard
-                  key={bucket.id}
-                  bucket={bucket}
-                  onConvert={() => setConvertBucketId(bucket.id)}
-                />
-              ))}
-            </div>
-          </Panel>
+            <Download size={14} /> Export CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-vault-teal px-3 py-2 text-xs font-medium text-vault-bg transition hover:bg-vault-teal-deep"
+          >
+            <Plus size={14} /> Add credits
+          </button>
+        </div>
+      }
+    >
+      <nav aria-label="Breadcrumb" className="text-xs text-vault-faint">
+        <Link to="/" className="hover:text-vault-foreground">
+          Dashboard
+        </Link>
+        <span className="mx-1.5">/</span>
+        <span className="text-vault-muted">Credits management</span>
+      </nav>
 
-          <UsageChart data={usage} range={range} onRangeChange={setRange} />
+      <div className="vault-panel flex flex-wrap items-end justify-between gap-4 p-5">
+        <div>
+          <p className="flex items-center gap-2 text-[11px] font-medium tracking-[0.14em] text-vault-faint uppercase">
+            <Coins size={13} className="text-vault-teal" /> Total balance
+          </p>
+          <p className="vault-mono mt-2 text-3xl font-semibold text-vault-foreground">${credits.stats.total.toFixed(2)}</p>
+        </div>
+        <p className="text-sm text-vault-muted">
+          {credits.stats.active} active buckets · {credits.stats.expiring} expiring soon · {credits.stats.empty} empty
+        </p>
+      </div>
 
-          <Panel title="Recent activity">
-            <ActivityList activities={activities} />
-          </Panel>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+        <StatTile label="Total credits" value={credits.stats.total.toFixed(2)} />
+        <StatTile label="Active buckets" value={String(credits.stats.active)} />
+        <StatTile label="Expiring ≤ 7d" value={String(credits.stats.expiring)} />
+        <StatTile label="Empty buckets" value={String(credits.stats.empty)} />
+        <StatTile label="Used this month" value={credits.stats.usedThisMonth.toFixed(2)} />
+        <StatTile label="Added this month" value={credits.stats.addedThisMonth.toFixed(2)} />
+      </div>
 
-          <CreditConversionModal
-            isOpen={convertBucketId !== null}
-            onClose={() => setConvertBucketId(null)}
-            buckets={buckets}
-            apps={apps}
-            initialBucketId={convertBucketId ?? undefined}
-            onConverted={() => void load()}
-          />
-        </>
+      <CreditsFilters
+        filters={credits.filters}
+        apps={appNames}
+        searchRef={searchRef}
+        onChange={credits.setFilter}
+        onReset={credits.resetFilters}
+      />
+
+      <Panel
+        title={`Credit buckets (${credits.visible.length})`}
+        action={
+          <div className="flex items-center gap-1 rounded-lg border border-vault-border bg-vault-raised p-1">
+            {([
+              ["table", Rows3],
+              ["grid", LayoutGrid],
+            ] as const).map(([value, Icon]) => (
+              <button
+                key={value}
+                type="button"
+                aria-label={`${value} view`}
+                onClick={() => setView(value)}
+                className={`rounded-md p-1.5 transition ${view === value ? "bg-vault-teal/15 text-vault-teal" : "text-vault-muted hover:text-vault-foreground"}`}
+              >
+                <Icon size={15} />
+              </button>
+            ))}
+          </div>
+        }
+      >
+        {credits.loading ? (
+          <CreditsLoadingState />
+        ) : credits.visible.length === 0 ? (
+          <CreditsEmptyState filtered={filtersActive} onAdd={() => setShowAdd(true)} />
+        ) : view === "table" ? (
+          <div className="hidden sm:block">
+            <CreditsTable
+              rows={credits.visible}
+              selected={credits.selected}
+              onToggle={credits.toggleSelect}
+              onSelectAll={() => (credits.selected.length === credits.visible.length ? credits.clearSelection() : credits.selectAll())}
+              onOpen={setDetail}
+            />
+          </div>
+        ) : null}
+
+        {!credits.loading && credits.visible.length > 0 && (
+          <div className={view === "table" ? "sm:hidden" : ""}>
+            <CreditsGrid rows={credits.visible} selected={credits.selected} onToggle={credits.toggleSelect} onOpen={setDetail} />
+          </div>
+        )}
+      </Panel>
+
+      <CreditsBulkActions
+        selected={credits.selectedBuckets}
+        busy={credits.busy}
+        onConvert={() => setShowBulkConvert(true)}
+        onFreeze={() => void credits.freeze(credits.selected, !credits.selectedBuckets.every((b) => b.frozen))}
+        onDelete={() => setDeleteIds(credits.selected)}
+        onExport={() => credits.exportCsv(credits.selectedBuckets)}
+        onMarkUsed={() => void credits.markUsed(credits.selected)}
+        onClear={credits.clearSelection}
+      />
+
+      <CreditsAnalytics buckets={credits.buckets} />
+
+      <UsageChart data={usage} range={range} onRangeChange={setRange} />
+
+      <Panel title="Transaction history">
+        <CreditsHistory />
+      </Panel>
+
+      {detail && (
+        <BucketDetailPanel
+          bucket={credits.buckets.find((b) => b.id === detail.id) ?? detail}
+          onClose={() => setDetail(null)}
+          onConvert={(bucket) => {
+            setDetail(null);
+            setConvertBucketId(bucket.id);
+          }}
+          onFreeze={(bucket) => void credits.freeze([bucket.id], !bucket.frozen)}
+          onDelete={(bucket) => {
+            setDetail(null);
+            setDeleteIds([bucket.id]);
+          }}
+        />
       )}
+
+      {showAdd && (
+        <AddCreditsModal apps={appNames} onClose={() => setShowAdd(false)} onAdd={(input) => void credits.addCredits(input)} />
+      )}
+
+      {showBulkConvert && (
+        <BulkConvertModal
+          buckets={credits.selectedBuckets}
+          apps={appNames}
+          onClose={() => setShowBulkConvert(false)}
+          onConfirm={(target) => void credits.bulkConvert(credits.selectedBuckets, target)}
+        />
+      )}
+
+      {deleteIds && (
+        <ConfirmDeleteModal count={deleteIds.length} onClose={() => setDeleteIds(null)} onConfirm={() => void credits.remove(deleteIds)} />
+      )}
+
+      <CreditConversionModal
+        isOpen={convertBucketId !== null}
+        onClose={() => setConvertBucketId(null)}
+        buckets={credits.buckets}
+        apps={apps}
+        initialBucketId={convertBucketId ?? undefined}
+        onConverted={() => void credits.reload()}
+      />
     </AppShell>
   );
 }

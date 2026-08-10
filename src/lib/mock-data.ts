@@ -24,7 +24,20 @@ export interface CreditBucket {
   original: number;
   softExpiry: string;
   peakRestricted: boolean;
+  createdAt?: string;
+  frozen?: boolean;
 }
+
+export interface CreditTransaction {
+  id: string;
+  bucketId: string;
+  type: "usage" | "addition" | "conversion" | "reconciliation" | "refund";
+  description: string;
+  appName: string;
+  amount: number;
+  timestamp: string;
+}
+
 
 export interface Activity {
   id: string;
@@ -88,12 +101,37 @@ export const mockApps: ConnectedApp[] = [
 ];
 
 export const mockBuckets: CreditBucket[] = [
-  { id: "b1", sourceType: "Subscription", appName: "OpenAI", remaining: 312.5, original: 500, softExpiry: days(21), peakRestricted: false },
-  { id: "b2", sourceType: "Promo", appName: "OpenAI", remaining: 46.25, original: 100, softExpiry: days(5), peakRestricted: true },
-  { id: "b3", sourceType: "Top-Up", appName: "Claude", remaining: 188.4, original: 250, softExpiry: days(48), peakRestricted: false },
-  { id: "b4", sourceType: "Grant", appName: "Midjourney", remaining: 18, original: 120, softExpiry: days(2), peakRestricted: false },
-  { id: "b5", sourceType: "Subscription", appName: "Replicate", remaining: 34.2, original: 80, softExpiry: days(12), peakRestricted: true },
+  { id: "b1", sourceType: "Subscription", appName: "OpenAI", remaining: 312.5, original: 500, softExpiry: days(21), peakRestricted: false, createdAt: days(-14), frozen: false },
+  { id: "b2", sourceType: "Promo", appName: "OpenAI", remaining: 46.25, original: 100, softExpiry: days(5), peakRestricted: true, createdAt: days(-30), frozen: false },
+  { id: "b3", sourceType: "Top-Up", appName: "Claude", remaining: 188.4, original: 250, softExpiry: days(48), peakRestricted: false, createdAt: days(-9), frozen: false },
+  { id: "b4", sourceType: "Grant", appName: "Midjourney", remaining: 18, original: 120, softExpiry: days(2), peakRestricted: false, createdAt: days(-58), frozen: false },
+  { id: "b5", sourceType: "Subscription", appName: "Replicate", remaining: 34.2, original: 80, softExpiry: days(12), peakRestricted: true, createdAt: days(-21), frozen: false },
+  { id: "b6", sourceType: "Promo", appName: "Hugging Face", remaining: 0, original: 50, softExpiry: days(34), peakRestricted: false, createdAt: days(-40), frozen: false },
 ];
+
+const txTemplates: Array<[CreditTransaction["type"], string, number]> = [
+  ["usage", "GPT-4 completion", -12.5],
+  ["usage", "Batch processing job", -25],
+  ["usage", "API call", -5],
+  ["addition", "Added credits", 100],
+  ["conversion", "Converted in from another bucket", 45],
+  ["reconciliation", "Provider balance reconciliation", -2.35],
+  ["usage", "Embedding batch", -8.4],
+  ["refund", "Failed job refund", 3.2],
+];
+
+export const mockTransactions: CreditTransaction[] = mockBuckets.flatMap((bucket, bi) =>
+  txTemplates.map(([type, description, amount], i) => ({
+    id: `tx-${bucket.id}-${i}`,
+    bucketId: bucket.id,
+    type,
+    description,
+    appName: bucket.appName,
+    amount,
+    timestamp: new Date(now - (bi * 6 + i * 29) * 3600_000).toISOString(),
+  })),
+);
+
 
 export const mockActivities: Activity[] = [
   { id: "a1", kind: "usage", message: "Used 12.5 credits on a GPT-4 completion", appName: "OpenAI", timestamp: hours(0.17), amount: -12.5 },

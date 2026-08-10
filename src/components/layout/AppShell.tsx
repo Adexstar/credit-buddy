@@ -8,12 +8,17 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
+  LogOut,
   Settings,
   ShieldCheck,
   Target,
   Vault,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
-import { mockUser } from "@/lib/mock-data";
+import { useAuth } from "@/hooks/useAuth";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useSearchContext } from "@/context/SearchContext";
 import { useShortcuts } from "@/context/ShortcutsContext";
 import { KeyboardShortcutsHelp } from "@/components/common/KeyboardShortcutsHelp";
@@ -34,8 +39,18 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-export function AppShell({ title, subtitle, actions, children }: AppShellProps) {
+export function AppShell(props: AppShellProps) {
+  return (
+    <RequireAuth>
+      <AppShellInner {...props} />
+    </RequireAuth>
+  );
+}
+
+function AppShellInner({ title, subtitle, actions, children }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const { user, logout, demoMode } = useAuth();
+  const { isConnected, configured: realtimeConfigured } = useWebSocket();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { openSearch } = useSearchContext();
   const { startTour } = useShortcuts();
@@ -92,14 +107,23 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
         <div className="border-t border-vault-border p-3">
           <div className="flex items-center gap-3 rounded-xl px-2 py-2">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-vault-teal/15 font-display text-sm text-vault-teal">
-              {mockUser.name.charAt(0)}
+              {(user?.name ?? "?").charAt(0)}
             </div>
             {!collapsed && (
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-vault-foreground">{mockUser.name}</p>
-                <p className="truncate text-xs text-vault-faint">{mockUser.email}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-vault-foreground">{user?.name}</p>
+                <p className="truncate text-xs text-vault-faint">{user?.email}</p>
               </div>
             )}
+            <button
+              type="button"
+              onClick={() => void logout()}
+              title="Sign out"
+              aria-label="Sign out"
+              className="rounded-lg p-1.5 text-vault-faint transition hover:bg-vault-raised hover:text-vault-danger"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </aside>
@@ -122,6 +146,24 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
                 <span className="hidden sm:inline">Search…</span>
                 <kbd className="rounded border border-vault-border bg-vault-raised px-1.5 py-0.5 text-xs">⌘K</kbd>
               </button>
+              {realtimeConfigured && (
+                <span
+                  title={isConnected ? "Realtime updates connected" : "Realtime updates offline"}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs ${
+                    isConnected
+                      ? "border-vault-green/35 bg-vault-green/10 text-vault-green"
+                      : "border-vault-border bg-vault-panel text-vault-faint"
+                  }`}
+                >
+                  {isConnected ? <Wifi size={14} /> : <WifiOff size={14} />}
+                  <span className="hidden sm:inline">{isConnected ? "Live" : "Offline"}</span>
+                </span>
+              )}
+              {demoMode && (
+                <span className="rounded-full border border-vault-amber/35 bg-vault-amber/10 px-3 py-2 text-xs text-vault-amber">
+                  Demo mode
+                </span>
+              )}
               <KeyboardShortcutsHelp />
               <button
                 type="button"

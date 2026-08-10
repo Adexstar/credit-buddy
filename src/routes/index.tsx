@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { AlertTriangle, Clock, Coins, Layers, Loader2, RefreshCw, Wallet } from "lucide-react";
+import { AlertTriangle, Clock, Coins, Download, Layers, Loader2, RefreshCw, Wallet } from "lucide-react";
+import { EXPORT_EVENT, REFRESH_EVENT } from "@/context/ShortcutsContext";
+import { ExportModal } from "@/components/modals/ExportModal";
+import { exportData } from "@/utils/export";
+
 import { AppShell, DemoDataPill } from "@/components/layout/AppShell";
 import {
   ActivityList,
@@ -48,6 +52,7 @@ function DashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [convertBucketId, setConvertBucketId] = useState<string | null>(null);
   const [historyApp, setHistoryApp] = useState<ConnectedApp | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const load = useCallback(async () => {
     const [s, a, b, act] = await Promise.all([
@@ -73,12 +78,32 @@ function DashboardPage() {
     void api.getUsage(range).then(setUsage);
   }, [range]);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     setRefreshing(true);
     await load();
     setRefreshing(false);
     toast.success("Balances refreshed");
-  };
+  }, [load]);
+
+  useEffect(() => {
+    const onRefresh = () => void refresh();
+    const onExport = () => setExportOpen(true);
+    document.addEventListener(REFRESH_EVENT, onRefresh);
+    document.addEventListener(EXPORT_EVENT, onExport);
+    return () => {
+      document.removeEventListener(REFRESH_EVENT, onRefresh);
+      document.removeEventListener(EXPORT_EVENT, onExport);
+    };
+  }, [refresh]);
+
+  const exportRows = buckets.map((b) => ({
+    id: b.id,
+    app: b.appName,
+    source: b.sourceType,
+    remaining: b.remaining,
+    original: b.original,
+    expires: b.softExpiry,
+  }));
 
   return (
     <AppShell
@@ -88,24 +113,33 @@ function DashboardPage() {
         <>
           <button
             type="button"
-            onClick={refresh}
+            onClick={() => void refresh()}
             className="flex items-center gap-2 rounded-full bg-vault-teal px-4 py-2 text-sm font-medium text-vault-bg transition hover:opacity-90"
           >
             {refreshing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
             Refresh
           </button>
           <BatchSyncButton apps={apps} onSync={syncApp} />
+          <button
+            type="button"
+            onClick={() => setExportOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-vault-border bg-vault-panel px-3 py-2 text-sm text-vault-muted transition hover:text-vault-foreground"
+          >
+            <Download size={15} />
+            <span className="hidden sm:inline">Export</span>
+          </button>
           <DemoDataPill />
         </>
       }
     >
+
       {loading ? (
         <div className="flex h-64 items-center justify-center">
           <Loader2 size={28} className="animate-spin text-vault-teal" />
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div id="stats-cards" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               label="Connected apps"
               value={String(stats?.connectedApps ?? 0)}
@@ -151,38 +185,45 @@ function DashboardPage() {
 
           <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
             <div className="space-y-6">
-              <Panel title="Connected apps" action={<ManageLink to="/apps">Manage</ManageLink>}>
-                <div className="space-y-3">
-                  {apps.map((app) => (
-                    <AppRow
-                      key={app.id}
-                      app={app}
-                      isSyncing={Boolean(syncingApps[app.id])}
-                      errorMessage={errors[app.id]}
-                      onSync={() => void syncApp(app.id, app.name)}
-                      onHistory={() => setHistoryApp(app)}
-                    />
-                  ))}
-                </div>
-              </Panel>
+              <div id="connected-apps">
+                <Panel title="Connected apps" action={<ManageLink to="/apps">Manage</ManageLink>}>
+                  <div className="space-y-3">
+                    {apps.map((app) => (
+                      <AppRow
+                        key={app.id}
+                        app={app}
+                        isSyncing={Boolean(syncingApps[app.id])}
+                        errorMessage={errors[app.id]}
+                        onSync={() => void syncApp(app.id, app.name)}
+                        onHistory={() => setHistoryApp(app)}
+                      />
+                    ))}
+                  </div>
+                </Panel>
+              </div>
 
-              <Panel title="Credit buckets" action={<ManageLink to="/credits">All buckets</ManageLink>}>
-                <div className="space-y-3">
-                  {buckets.map((bucket) => (
-                    <BucketCard
-                      key={bucket.id}
-                      bucket={bucket}
-                      onConvert={() => setConvertBucketId(bucket.id)}
-                    />
-                  ))}
-                </div>
-              </Panel>
+              <div id="credit-buckets">
+                <Panel title="Credit buckets" action={<ManageLink to="/credits">All buckets</ManageLink>}>
+                  <div className="space-y-3">
+                    {buckets.map((bucket) => (
+                      <BucketCard
+                        key={bucket.id}
+                        bucket={bucket}
+                        onConvert={() => setConvertBucketId(bucket.id)}
+                      />
+                    ))}
+                  </div>
+                </Panel>
+              </div>
             </div>
 
-            <Panel title="Recent activity" className="h-fit">
-              <ActivityList activities={activities} />
-            </Panel>
+            <div id="recent-activity">
+              <Panel title="Recent activity" className="h-fit">
+                <ActivityList activities={activities} />
+              </Panel>
+            </div>
           </div>
+
 
           <UsageChart data={usage} range={range} onRangeChange={setRange} />
 
@@ -218,6 +259,21 @@ function DashboardPage() {
           void load();
         }}
       />
+
+      <ExportModal
+        isOpen={exportOpen}
+        onClose={() => setExportOpen(false)}
+        rowCount={exportRows.length}
+        onExport={(options) => {
+          try {
+            exportData(exportRows, "credit-buckets", options);
+            toast.success(`Exported credit-buckets.${options.format}`);
+          } catch (error) {
+            toast.error(`Export failed: ${(error as Error).message}`);
+          }
+        }}
+      />
     </AppShell>
+
   );
 }

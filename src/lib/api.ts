@@ -215,6 +215,28 @@ export const api = {
     }
     return request<SyncHistoryEntry[]>(appId ? `/sync/${appId}/history` : "/sync/history");
   },
+
+  async disconnectApp(appId: string): Promise<void> {
+    if (!API_URL) {
+      await wait(350);
+      const app = localApps.find((a) => a.id === appId);
+      localApps = localApps.filter((a) => a.id !== appId);
+      if (app) {
+        localActivities = [
+          {
+            id: `act-disc-${Date.now()}`,
+            kind: "sync",
+            message: `Disconnected ${app.name}`,
+            appName: app.name,
+            timestamp: new Date().toISOString(),
+          },
+          ...localActivities,
+        ];
+      }
+      return;
+    }
+    await request(`/apps/${appId}`, { method: "DELETE" });
+  },
 };
 
 

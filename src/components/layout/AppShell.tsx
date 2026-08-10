@@ -7,11 +7,17 @@ import {
   Link2,
   PanelLeftClose,
   PanelLeftOpen,
+  Search,
   Settings,
   ShieldCheck,
+  Target,
   Vault,
 } from "lucide-react";
 import { mockUser } from "@/lib/mock-data";
+import { useSearchContext } from "@/context/SearchContext";
+import { useShortcuts } from "@/context/ShortcutsContext";
+import { KeyboardShortcutsHelp } from "@/components/common/KeyboardShortcutsHelp";
+
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
@@ -31,6 +37,9 @@ interface AppShellProps {
 export function AppShell({ title, subtitle, actions, children }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { openSearch } = useSearchContext();
+  const { startTour } = useShortcuts();
+
 
   return (
     <div className="min-h-screen bg-vault-bg">
@@ -102,8 +111,27 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
               <h1 className="font-display text-2xl font-bold text-vault-foreground sm:text-3xl">{title}</h1>
               <p className="mt-1 text-sm text-vault-muted">{subtitle}</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               {actions}
+              <button
+                type="button"
+                onClick={openSearch}
+                className="flex items-center gap-2 rounded-full border border-vault-border bg-vault-panel px-3 py-2 text-sm text-vault-muted transition hover:text-vault-foreground"
+              >
+                <Search size={15} />
+                <span className="hidden sm:inline">Search…</span>
+                <kbd className="rounded border border-vault-border bg-vault-raised px-1.5 py-0.5 text-xs">⌘K</kbd>
+              </button>
+              <KeyboardShortcutsHelp />
+              <button
+                type="button"
+                onClick={startTour}
+                title="Take the product tour"
+                className="inline-flex items-center gap-2 rounded-full border border-vault-border bg-vault-panel px-3 py-2 text-sm text-vault-muted transition hover:text-vault-foreground"
+              >
+                <Target size={15} />
+                <span className="hidden sm:inline">Take tour</span>
+              </button>
               <button
                 type="button"
                 aria-label="Notifications"
@@ -112,6 +140,7 @@ export function AppShell({ title, subtitle, actions, children }: AppShellProps) 
                 <Bell size={18} />
                 <span className="absolute right-1.5 top-1.5 size-2 rounded-full bg-vault-teal" />
               </button>
+
             </div>
           </div>
         </header>

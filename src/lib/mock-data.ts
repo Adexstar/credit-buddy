@@ -24,7 +24,20 @@ export interface CreditBucket {
   original: number;
   softExpiry: string;
   peakRestricted: boolean;
+  createdAt?: string;
+  frozen?: boolean;
 }
+
+export interface CreditTransaction {
+  id: string;
+  bucketId: string;
+  type: "usage" | "addition" | "conversion" | "reconciliation" | "refund";
+  description: string;
+  appName: string;
+  amount: number;
+  timestamp: string;
+}
+
 
 export interface Activity {
   id: string;

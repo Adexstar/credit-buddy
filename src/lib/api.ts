@@ -130,7 +130,10 @@ export const api = {
       const provider = PROVIDERS.find((p) => p.id === providerId);
       return { ok: true, message: `Key verified with ${provider?.name ?? "provider"}.` };
     }
-    return appsApi.testConnection({ provider: providerId, apiKey });
+    {
+      const result = await appsApi.testConnection({ provider: providerId, apiKey });
+      return { ok: result.ok, message: result.message ?? (result.ok ? "Key verified." : "Could not verify that key.") };
+    }
   },
 
   async saveConnection(providerId: string, apiKey: string, name: string): Promise<ConnectedApp> {

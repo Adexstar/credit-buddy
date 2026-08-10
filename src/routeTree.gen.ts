@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppsRouteImport } from './routes/apps'
 import { Route as CreditsRouteImport } from './routes/credits'
 import { Route as PoliciesRouteImport } from './routes/policies'
+import { Route as SettingsRouteImport } from './routes/settings'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const PoliciesRoute = PoliciesRouteImport.update({
   path: '/policies',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/apps': typeof AppsRoute
   '/credits': typeof CreditsRoute
   '/policies': typeof PoliciesRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/apps': typeof AppsRoute
   '/credits': typeof CreditsRoute
   '/policies': typeof PoliciesRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,14 @@ export interface FileRoutesById {
   '/apps': typeof AppsRoute
   '/credits': typeof CreditsRoute
   '/policies': typeof PoliciesRoute
+  '/settings': typeof SettingsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/apps' | '/credits' | '/policies'
+  fullPaths: '/' | '/apps' | '/credits' | '/policies' | '/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/apps' | '/credits' | '/policies'
-  id: '__root__' | '/' | '/apps' | '/credits' | '/policies'
+  to: '/' | '/apps' | '/credits' | '/policies' | '/settings'
+  id: '__root__' | '/' | '/apps' | '/credits' | '/policies' | '/settings'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +76,7 @@ export interface RootRouteChildren {
   AppsRoute: typeof AppsRoute
   CreditsRoute: typeof CreditsRoute
   PoliciesRoute: typeof PoliciesRoute
+  SettingsRoute: typeof SettingsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PoliciesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +124,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppsRoute: AppsRoute,
   CreditsRoute: CreditsRoute,
   PoliciesRoute: PoliciesRoute,
+  SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

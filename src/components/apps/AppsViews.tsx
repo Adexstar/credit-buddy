@@ -98,13 +98,15 @@ export function AppsGrid({ apps, syncingApps, selected, onToggleSelect, onSync, 
                   {app.emoji}
                 </span>
                 <div className="min-w-0">
-                  <h3 className="truncate font-display text-base font-semibold text-vault-foreground">
+                  <h3 className="font-display text-base font-semibold leading-tight text-vault-foreground">
                     {app.displayName}
                   </h3>
                   <p className="truncate text-xs text-vault-faint">{app.name}</p>
                 </div>
               </div>
-              <StatusPill app={app} syncing={syncing} />
+              <div className="shrink-0">
+                <StatusPill app={app} syncing={syncing} />
+              </div>
             </div>
 
             <div className="mt-4 flex items-end justify-between">

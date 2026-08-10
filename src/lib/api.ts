@@ -23,8 +23,13 @@ import {
   type SyncResult,
 } from "./sync";
 
-const API_URL = import.meta.env["VITE_API_URL"] as string | undefined;
-
+import { API_URL } from "@/api/client";
+import { appsApi } from "@/api/apps";
+import { creditsApi } from "@/api/credits";
+import { dashboardApi } from "@/api/dashboard";
+import { policiesApi } from "@/api/policies";
+import { syncApi } from "@/api/sync";
+import { authApi } from "@/api/auth";
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -33,19 +38,6 @@ let localApps: ConnectedApp[] = [...mockApps];
 let localActivities: Activity[] = [...mockActivities];
 let localPolicies: Policy[] = [...mockPolicies];
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = typeof window !== "undefined" ? window.localStorage.getItem("auth_token") : null;
-  const response = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-  return (await response.json()) as T;
-}
 
 function computeStats(): Stats {
   const totalBalance = mockBuckets.reduce((sum, b) => sum + b.remaining, 0);
@@ -68,7 +60,7 @@ export const api = {
 
   async getProfile(): Promise<UserProfile> {
     if (!API_URL) return mockUser;
-    return request<UserProfile>("/auth/me");
+    return authApi.getProfile() as unknown as Promise<UserProfile>;
   },
 
   async getStats(): Promise<Stats> {
@@ -76,7 +68,7 @@ export const api = {
       await wait(180);
       return computeStats();
     }
-    return request<Stats>("/credits/stats");
+    return dashboardApi.getStats();
   },
 
   async getApps(): Promise<ConnectedApp[]> {
@@ -84,7 +76,7 @@ export const api = {
       await wait(180);
       return localApps;
     }
-    return request<ConnectedApp[]>("/apps/connected");
+    return appsApi.getAll();
   },
 
   async getBuckets(): Promise<CreditBucket[]> {
@@ -92,7 +84,7 @@ export const api = {
       await wait(180);
       return mockBuckets;
     }
-    return request<CreditBucket[]>("/credits/buckets");
+    return creditsApi.getBuckets();
   },
 
   async getUsage(range: TimeRange): Promise<UsageData> {
@@ -100,7 +92,7 @@ export const api = {
       await wait(150);
       return mockUsage[range];
     }
-    return request<UsageData>(`/credits/usage?range=${range}`);
+    return dashboardApi.getUsage(range);
   },
 
   async getActivity(): Promise<Activity[]> {
@@ -108,7 +100,7 @@ export const api = {
       await wait(150);
       return localActivities;
     }
-    return request<Activity[]>("/credits/activity");
+    return dashboardApi.getActivity();
   },
 
   async getPolicies(): Promise<Policy[]> {
@@ -116,7 +108,7 @@ export const api = {
       await wait(150);
       return localPolicies;
     }
-    return request<Policy[]>("/policies");
+    return policiesApi.getAll();
   },
 
   async togglePolicy(id: string, active: boolean): Promise<Policy[]> {
@@ -125,7 +117,7 @@ export const api = {
       localPolicies = localPolicies.map((p) => (p.id === id ? { ...p, active } : p));
       return localPolicies;
     }
-    await request(`/policies/${id}`, { method: "PUT", body: JSON.stringify({ is_active: active }) });
+    await policiesApi.update(id, { isActive: active });
     return this.getPolicies();
   },
 
@@ -138,10 +130,7 @@ export const api = {
       const provider = PROVIDERS.find((p) => p.id === providerId);
       return { ok: true, message: `Key verified with ${provider?.name ?? "provider"}.` };
     }
-    return request<{ ok: boolean; message: string }>("/apps/test", {
-      method: "POST",
-      body: JSON.stringify({ provider: providerId, api_key: apiKey }),
-    });
+    return appsApi.testConnection({ provider: providerId, apiKey });
   },
 
   async saveConnection(providerId: string, apiKey: string, name: string): Promise<ConnectedApp> {
@@ -170,10 +159,7 @@ export const api = {
       ];
       return app;
     }
-    return request<ConnectedApp>("/apps/connect", {
-      method: "POST",
-      body: JSON.stringify({ provider: providerId, api_key: apiKey, app_name: name }),
-    });
+    return appsApi.connect({ provider: providerId, apiKey, name });
   },
 
   async syncApp(appId: string): Promise<SyncResult> {
@@ -205,7 +191,18 @@ export const api = {
       }
       return result;
     }
-    return request<SyncResult>(`/sync/${appId}`, { method: "POST" });
+    {
+      const result = await syncApi.trigger(appId);
+      const app = localApps.find((a) => a.id === appId);
+      return {
+        success: true,
+        appId,
+        appName: app?.name ?? appId,
+        message: "Balance refreshed",
+        ...(result.balance !== undefined ? { balance: result.balance } : {}),
+        ...(result.syncedAt ? { lastSync: result.syncedAt } : {}),
+      };
+    }
   },
 
   async getSyncHistory(appId?: string): Promise<SyncHistoryEntry[]> {
@@ -213,7 +210,7 @@ export const api = {
       await wait(400);
       return readSyncHistory(appId);
     }
-    return request<SyncHistoryEntry[]>(appId ? `/sync/${appId}/history` : "/sync/history");
+    return (appId ? syncApi.getHistory(appId) : syncApi.getAll()) as unknown as Promise<SyncHistoryEntry[]>;
   },
 
   async disconnectApp(appId: string): Promise<void> {
@@ -235,7 +232,7 @@ export const api = {
       }
       return;
     }
-    await request(`/apps/${appId}`, { method: "DELETE" });
+    await appsApi.disconnect(appId);
   },
 };
 

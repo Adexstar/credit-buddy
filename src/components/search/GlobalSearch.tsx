@@ -133,10 +133,20 @@ export function GlobalSearch({ isOpen, onClose }: { isOpen: boolean; onClose: ()
 
   const grouped = useMemo(() => results, [results]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onEscape);
+    return () => document.removeEventListener("keydown", onEscape);
+  }, [isOpen, onClose]);
+
   const openResult = (result: SearchResult) => {
     onClose();
     void navigate({ to: result.to });
   };
+
 
   const onKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") {

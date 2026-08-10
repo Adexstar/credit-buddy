@@ -149,7 +149,7 @@ export function UsageChart({
           <button
             type="button"
             title="Export chart data as CSV"
-            onClick={() => exportData(rows, { filename: `usage-${range}`, format: "csv" })}
+            onClick={() => exportData(rows, `usage-${range}`, { format: "csv" })}
             className="rounded-full border border-vault-border bg-vault-raised p-1.5 text-vault-muted transition hover:text-vault-foreground"
           >
             <Download size={14} />

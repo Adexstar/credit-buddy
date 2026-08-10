@@ -7,6 +7,7 @@ import {
   Link2,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings,
   ShieldCheck,
   Vault,
 } from "lucide-react";
@@ -17,6 +18,7 @@ const NAV = [
   { to: "/apps", label: "Connected Apps", icon: Link2 },
   { to: "/credits", label: "Credits", icon: CreditCard },
   { to: "/policies", label: "Policies", icon: ShieldCheck },
+  { to: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
 interface AppShellProps {

@@ -1,166 +1,212 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { Loader2, Plug, Plus } from "lucide-react";
+import { Plug } from "lucide-react";
 import { AppShell, DemoDataPill } from "@/components/layout/AppShell";
-import { AppRow, Panel } from "@/components/dashboard/primitives";
-import { BatchSyncButton } from "@/components/dashboard/BatchSyncButton";
-import { SyncHistoryModal } from "@/components/dashboard/SyncHistory";
-import { useSync } from "@/hooks/useSync";
-import { useAutoSync } from "@/hooks/useAutoSync";
-import { ConnectAppModal } from "@/components/dashboard/ConnectAppModal";
-import { api, type ConnectedApp } from "@/lib/api";
-import { PROVIDERS } from "@/lib/mock-data";
+import { Panel } from "@/components/dashboard/primitives";
+import { AppsHeaderActions, AppsHeaderStats, Breadcrumb, StatusSummary } from "@/components/apps/AppsHeader";
+import { AppFiltersBar } from "@/components/apps/AppFilters";
+import { AppsGrid, AppsList } from "@/components/apps/AppsViews";
+import { AppsBulkActions, AppsEmptyState, AppsLoadingState } from "@/components/apps/AppsStates";
+import { AppSettingsPanel } from "@/components/apps/AppSettingsPanel";
+import { DisconnectConfirmModal, RotateKeyModal } from "@/components/apps/AppsModals";
+import { ConnectAppWizard } from "@/components/apps/ConnectAppWizard";
+import { useAppsManagement } from "@/hooks/useAppsManagement";
+import type { ManagedApp } from "@/lib/apps";
 
 export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
     meta: [
-      { title: "Connected apps — Credit Bank" },
+      { title: "App Management — Credit Bank" },
       {
         name: "description",
-        content: "Manage OpenAI, Claude, Midjourney, Replicate and Hugging Face API connections and sync status.",
+        content:
+          "Manage connected AI providers: rotate API keys, configure sync settings, review connection history and disconnect apps.",
       },
-      { property: "og:title", content: "Connected apps — Credit Bank" },
-      { property: "og:description", content: "Manage your AI provider connections and key sync health." },
+      { property: "og:title", content: "App Management — Credit Bank" },
+      { property: "og:description", content: "Full control over your connected AI provider integrations." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
 });
 
 function AppsPage() {
-  const [apps, setApps] = useState<ConnectedApp[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [presetProvider, setPresetProvider] = useState<string | undefined>(undefined);
-  const [historyApp, setHistoryApp] = useState<ConnectedApp | null>(null);
+  const m = useAppsManagement();
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [settingsApp, setSettingsApp] = useState<ManagedApp | null>(null);
+  const [rotateApp, setRotateApp] = useState<ManagedApp | null>(null);
+  const [disconnectApp, setDisconnectApp] = useState<ManagedApp | null>(null);
+  const [bulkDisconnect, setBulkDisconnect] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async () => {
-    setApps(await api.getApps());
-    setLoading(false);
-  }, []);
-
-  const { syncApp, syncingApps, errors, cancelAll } = useSync(load);
-  useAutoSync(apps, syncApp);
+  // Keep the open settings panel in sync with refreshed data.
+  useEffect(() => {
+    if (!settingsApp) return;
+    const fresh = m.apps.find((a) => a.id === settingsApp.id);
+    if (!fresh) setSettingsApp(null);
+    else if (fresh !== settingsApp) setSettingsApp(fresh);
+  }, [m.apps, settingsApp]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "r") {
+      const mod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      if (mod && key === "n") {
         e.preventDefault();
-        void (async () => {
-          for (const app of apps) await syncApp(app.id, app.name);
-        })();
+        setConnectOpen(true);
+      } else if (mod && key === "f") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      } else if (mod && key === "a") {
+        e.preventDefault();
+        m.selectAll();
+      } else if (mod && key === "s") {
+        e.preventDefault();
+        void m.bulkSync();
+      } else if ((e.key === "Delete" || e.key === "Backspace") && m.selected.length > 0) {
+        const tag = (e.target as HTMLElement | null)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        e.preventDefault();
+        setBulkDisconnect(true);
+      } else if (e.key === "Escape") {
+        if (settingsApp) setSettingsApp(null);
+        else m.clearSelection();
       }
-      if (e.key === "Escape") cancelAll();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [apps, syncApp, cancelAll]);
+  }, [m, settingsApp]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const openModal = (providerId?: string) => {
-    setPresetProvider(providerId);
-    setModalOpen(true);
+  const viewProps = {
+    apps: m.visible,
+    syncingApps: m.syncingApps,
+    selected: m.selected,
+    onToggleSelect: m.toggleSelect,
+    onSync: (app: ManagedApp) => void m.syncApp(app.id, app.displayName),
+    onSettings: (app: ManagedApp) => setSettingsApp(app),
+    onDisconnect: (app: ManagedApp) => setDisconnectApp(app),
   };
 
   return (
     <AppShell
-      title="Connected apps"
-      subtitle="Manage your AI provider connections"
+      title="App Management"
+      subtitle="Manage your connected AI providers and API keys"
       actions={
         <>
-          <BatchSyncButton apps={apps} onSync={syncApp} />
-          <button
-            type="button"
-            onClick={() => openModal(undefined)}
-            className="flex items-center gap-2 rounded-full bg-vault-teal px-4 py-2 text-sm font-medium text-vault-bg transition hover:opacity-90"
-          >
-            <Plus size={15} />
-            Add App
-          </button>
+          <AppsHeaderActions
+            selectedCount={m.selected.length}
+            onConnect={() => setConnectOpen(true)}
+            onSyncAll={() => void m.bulkSync()}
+            onDisconnectSelected={() => m.selected.length && setBulkDisconnect(true)}
+            onExport={m.exportSelected}
+          />
           <DemoDataPill />
         </>
       }
     >
-      {loading ? (
-        <div className="flex h-64 items-center justify-center">
-          <Loader2 size={28} className="animate-spin text-vault-teal" />
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Breadcrumb />
+        <StatusSummary connected={m.stats.connected} pending={m.stats.pending} disconnected={m.stats.disconnected} />
+      </div>
+
+      <AppsHeaderStats stats={m.stats} />
+
+      {m.loading ? (
+        <AppsLoadingState />
+      ) : m.apps.length === 0 ? (
+        <Panel title="Your connections">
+          <AppsEmptyState onConnect={() => setConnectOpen(true)} />
+        </Panel>
       ) : (
-        <>
-          <Panel title="Your connections">
-            {apps.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-10 text-center">
-                <Plug size={26} className="text-vault-teal" />
-                <h3 className="font-display text-base font-semibold text-vault-foreground">No apps connected</h3>
-                <p className="max-w-sm text-sm text-vault-muted">
-                  Connect your AI provider API keys to start managing credits.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => openModal(undefined)}
-                  className="mt-2 rounded-full bg-vault-teal px-4 py-2 text-sm font-medium text-vault-bg"
-                >
-                  Connect first app
+        <Panel title="Your connections">
+          <div className="space-y-5">
+            <AppFiltersBar
+              ref={searchRef}
+              filters={m.filters}
+              setFilter={m.setFilter}
+              clearFilters={m.clearFilters}
+              view={m.view}
+              setView={m.setView}
+              resultCount={m.visible.length}
+            />
+            {m.visible.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-10 text-center">
+                <Plug size={24} className="text-vault-teal" />
+                <p className="text-sm text-vault-muted">No apps match these filters.</p>
+                <button type="button" onClick={m.clearFilters} className="text-xs text-vault-teal hover:underline">
+                  Clear filters
                 </button>
               </div>
+            ) : m.view === "grid" ? (
+              <AppsGrid {...viewProps} />
             ) : (
-              <div className="space-y-3">
-                {apps.map((app) => (
-                  <AppRow
-                    key={app.id}
-                    app={app}
-                    isSyncing={Boolean(syncingApps[app.id])}
-                    errorMessage={errors[app.id]}
-                    onSync={() => void syncApp(app.id, app.name)}
-                    onHistory={() => setHistoryApp(app)}
-                  />
-                ))}
-              </div>
+              <AppsList {...viewProps} />
             )}
-          </Panel>
-
-          <Panel title="Add a new app">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {PROVIDERS.map((provider) => (
-                <div key={provider.id} className="vault-raised flex items-center gap-3 p-4">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-vault-teal/10 font-display text-xs font-semibold text-vault-teal">
-                    {provider.initials}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-display text-sm font-semibold text-vault-foreground">{provider.name}</h3>
-                    <p className="text-xs text-vault-faint">Connect your API key</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openModal(provider.id)}
-                    className="shrink-0 rounded-lg border border-vault-teal/40 bg-vault-teal/10 px-3 py-1.5 text-xs text-vault-teal transition hover:bg-vault-teal/20"
-                  >
-                    Connect
-                  </button>
-                </div>
-              ))}
-            </div>
-          </Panel>
-        </>
+          </div>
+        </Panel>
       )}
 
-      {historyApp && (
-        <SyncHistoryModal appId={historyApp.id} appName={historyApp.name} onClose={() => setHistoryApp(null)} />
-      )}
-
-      <ConnectAppModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        connectedApps={apps}
-        initialProvider={presetProvider}
-        onConnected={(app) => {
-          toast.success(`${app.name} connected`);
-          void load();
-        }}
+      <AppsBulkActions
+        count={m.selected.length}
+        onClear={m.clearSelection}
+        onSync={() => void m.bulkSync()}
+        onDisconnect={() => setBulkDisconnect(true)}
+        onExport={m.exportSelected}
       />
+
+      {settingsApp && (
+        <AppSettingsPanel
+          app={settingsApp}
+          busy={m.busy}
+          onClose={() => setSettingsApp(null)}
+          onSave={(patch) => m.saveSettings(settingsApp.id, patch, settingsApp.displayName)}
+          onRotateKey={() => setRotateApp(settingsApp)}
+          onDisconnect={() => setDisconnectApp(settingsApp)}
+        />
+      )}
+
+      {rotateApp && (
+        <RotateKeyModal
+          app={rotateApp}
+          onClose={() => setRotateApp(null)}
+          onRotate={(key) => m.rotateKey(rotateApp.id, key, rotateApp.displayName)}
+        />
+      )}
+
+      {disconnectApp && (
+        <DisconnectConfirmModal
+          appName={disconnectApp.displayName}
+          busy={m.busy}
+          onClose={() => setDisconnectApp(null)}
+          onConfirm={() => {
+            const target = disconnectApp;
+            setDisconnectApp(null);
+            setSettingsApp(null);
+            void m.disconnect(target.id, target.displayName);
+          }}
+        />
+      )}
+
+      {bulkDisconnect && (
+        <DisconnectConfirmModal
+          count={m.selected.length}
+          busy={m.busy}
+          onClose={() => setBulkDisconnect(false)}
+          onConfirm={() => {
+            setBulkDisconnect(false);
+            void m.bulkDisconnect();
+          }}
+        />
+      )}
+
+      {connectOpen && (
+        <ConnectAppWizard
+          connectedApps={m.apps}
+          onClose={() => setConnectOpen(false)}
+          onConnected={() => void m.reload()}
+        />
+      )}
     </AppShell>
   );
 }

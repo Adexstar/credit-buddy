@@ -7,6 +7,7 @@ import { PlanComparison } from "@/components/settings/PlanComparison";
 import { BillingHistory } from "@/components/settings/BillingHistory";
 import { useSettings } from "@/hooks/useSettings";
 import { PLANS } from "@/lib/settings";
+import { TIER_LIMITS, limitLabel, type PlanTier } from "@/lib/tiers";
 
 export function ChangePlanModal({
   currentPlan,
@@ -14,12 +15,13 @@ export function ChangePlanModal({
   onConfirm,
   busy,
 }: {
-  currentPlan: "free" | "premium";
+  currentPlan: PlanTier;
   onClose: () => void;
-  onConfirm: (plan: "free" | "premium") => void;
+  onConfirm: (plan: PlanTier) => void;
   busy?: boolean;
 }) {
-  const [selected, setSelected] = useState<"free" | "premium">(currentPlan === "free" ? "premium" : "free");
+  const [selected, setSelected] = useState<PlanTier>(currentPlan === "pro" ? "premium" : "pro");
+  const downgrade = TIER_LIMITS[selected].price < TIER_LIMITS[currentPlan].price;
   return (
     <Modal
       title="Change plan"
@@ -35,7 +37,7 @@ export function ChangePlanModal({
         </>
       }
     >
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         {PLANS.map((plan) => (
           <button
             key={plan.id}
@@ -57,6 +59,21 @@ export function ChangePlanModal({
           </button>
         ))}
       </div>
+      {downgrade && (
+        <ul className="mt-4 space-y-1 rounded-xl border border-vault-amber/30 bg-vault-amber/10 p-3 text-xs text-vault-amber">
+          <li>
+            Active policies above {limitLabel(TIER_LIMITS[selected].maxPolicies)} will be paused.
+          </li>
+          <li>
+            Policy types and channels not in {TIER_LIMITS[selected].name} stop running (spend ceilings, AI conversion,
+            orchestration, webhooks, SMS).
+          </li>
+          <li>
+            Team seats above {limitLabel(TIER_LIMITS[selected].teamMembers)} lose access, and your conversion fee rises
+            to {Math.round(TIER_LIMITS[selected].fee * 100)}%.
+          </li>
+        </ul>
+      )}
     </Modal>
   );
 }

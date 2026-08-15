@@ -392,7 +392,7 @@ export function evaluatePolicy(policy: Policy, s: Scenario): SimulationResult {
     case "webhook": {
       const url = policy.webhookUrl ?? "";
       steps.push(url ? `Endpoint ${url}` : "No endpoint configured");
-      steps.push(`Daily cap ${policy.maxExecutionsPerDay ?? 0 || "unlimited"}`);
+      steps.push(`Daily cap ${(policy.maxExecutionsPerDay ?? 0) || "unlimited"}`);
       return {
         triggered: !!url,
         action: url ? `POST payload to ${url}` : "No action",

@@ -6,6 +6,7 @@ export const TONE: Record<string, { text: string; bg: string; border: string }> 
   purple: { text: "text-vault-purple", bg: "bg-vault-purple/10", border: "border-vault-purple/30" },
   amber: { text: "text-vault-amber", bg: "bg-vault-amber/10", border: "border-vault-amber/30" },
   danger: { text: "text-vault-danger", bg: "bg-vault-danger/10", border: "border-vault-danger/30" },
+  green: { text: "text-vault-green", bg: "bg-vault-green/10", border: "border-vault-green/30" },
 };
 
 export function Modal({

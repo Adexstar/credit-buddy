@@ -1,5 +1,18 @@
-import { Bell, Ban, Moon, Pencil, RefreshCw, Trash2, FlaskConical, GripVertical } from "lucide-react";
+import {
+  Bell,
+  Ban,
+  Moon,
+  Pencil,
+  RefreshCw,
+  Trash2,
+  FlaskConical,
+  GripVertical,
+  Sparkles,
+  Workflow,
+  Webhook,
+} from "lucide-react";
 import { POLICY_TYPES, actionLabel, scopeLabel, triggerLabel, type Policy, type PolicyType } from "@/lib/policies";
+import { TierBadge } from "@/components/common/UpgradePrompt";
 import { TONE } from "./ui";
 
 const ICONS: Record<PolicyType, typeof Bell> = {
@@ -7,6 +20,9 @@ const ICONS: Record<PolicyType, typeof Bell> = {
   "off-peak": Moon,
   alert: Bell,
   ceiling: Ban,
+  "smart-convert": Sparkles,
+  orchestration: Workflow,
+  webhook: Webhook,
 };
 
 export function policyTone(type: PolicyType) {
@@ -63,7 +79,10 @@ export function PolicyCard({
       <div className="flex items-start gap-3">
         <PolicyTypeIcon type={policy.type} />
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-display text-base font-semibold text-vault-foreground">{policy.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="truncate font-display text-base font-semibold text-vault-foreground">{policy.name}</h3>
+            {typeMeta && typeMeta.requiredTier !== "free" && <TierBadge tier={typeMeta.requiredTier} />}
+          </div>
           <p className="mt-1 text-sm leading-relaxed text-vault-muted">{typeMeta?.blurb}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -107,6 +126,23 @@ export function PolicyCard({
         <div>
           <dt className="text-vault-faint">Action</dt>
           <dd className="mt-0.5 text-vault-foreground">{actionLabel(policy)}</dd>
+        </div>
+      </dl>
+
+      <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2 rounded-xl border border-vault-border bg-vault-bg/40 px-3 py-2 text-xs">
+        <div>
+          <dt className="text-vault-faint">Triggers</dt>
+          <dd className="vault-mono mt-0.5 text-vault-foreground">{policy.triggerCount ?? 0}</dd>
+        </div>
+        <div>
+          <dt className="text-vault-faint">Success</dt>
+          <dd className="vault-mono mt-0.5 text-vault-green">{Math.round((policy.successRate ?? 1) * 100)}%</dd>
+        </div>
+        <div>
+          <dt className="text-vault-faint">Last run</dt>
+          <dd className="mt-0.5 text-vault-foreground">
+            {policy.lastTriggeredAt ? new Date(policy.lastTriggeredAt).toLocaleDateString() : "Never"}
+          </dd>
         </div>
       </dl>
 

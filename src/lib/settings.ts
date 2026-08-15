@@ -1,4 +1,7 @@
 /** Settings domain: profile, notifications, billing, team, API keys, exports. */
+import { TIERS, TIER_LIMITS, setActiveTier, type PlanTier } from "./tiers";
+
+export type { PlanTier };
 
 export interface Profile {
   name: string;
@@ -6,7 +9,7 @@ export interface Profile {
   username: string;
   bio: string;
   avatar: string | null;
-  plan: "free" | "premium";
+  plan: PlanTier;
   joined: string;
 }
 
@@ -40,21 +43,30 @@ export interface PaymentMethod {
   primary: boolean;
 }
 
+export interface InvoiceLine {
+  label: string;
+  amount: number;
+}
+
 export interface Invoice {
   id: string;
   date: string;
   amount: number;
   plan: string;
   status: "paid" | "failed" | "refunded";
+  periodStart?: string;
+  periodEnd?: string;
+  lines?: InvoiceLine[];
 }
 
 export interface Billing {
-  plan: "free" | "premium";
+  plan: PlanTier;
   price: number;
   nextBilling: string;
   cancelled: boolean;
   paymentMethods: PaymentMethod[];
   history: Invoice[];
+  interval?: "monthly" | "annual";
 }
 
 export type TeamRole = "owner" | "admin" | "member" | "viewer";
@@ -114,33 +126,18 @@ export const ROLE_INFO: Record<TeamRole, { label: string; description: string }>
   viewer: { label: "Viewer", description: "Read-only access" },
 };
 
-export const PLANS = [
-  {
-    id: "free" as const,
-    name: "Free",
-    price: 0,
-    rollover: "50%",
-    policies: "2 max",
-    team: "No",
-    support: "Email",
-    features: ["50% credit rollover", "2 policies", "Basic analytics", "Email support"],
-  },
-  {
-    id: "premium" as const,
-    name: "Premium",
-    price: 5,
-    rollover: "100%",
-    policies: "Unlimited",
-    team: "Yes (5)",
-    support: "Priority",
-    features: [
-      "Unlimited rollover policies",
-      "Priority proxy speed",
-      "Advanced analytics",
-      "Team member support (up to 5)",
-    ],
-  },
-];
+export const PLANS = TIERS.map((tier) => ({
+  id: tier.id,
+  name: tier.name,
+  price: tier.price,
+  annualPrice: tier.annualPrice,
+  fee: tier.fee,
+  rollover: tier.rollover,
+  policies: tier.maxPolicies >= 9999 ? "Unlimited" : `${tier.maxPolicies} max`,
+  team: tier.teamMembers >= 9999 ? "Unlimited" : `${tier.teamMembers} seat${tier.teamMembers > 1 ? "s" : ""}`,
+  support: tier.support,
+  features: tier.highlights,
+}));
 
 export const PASSWORD_RULES = [
   { id: "length", label: "At least 8 characters", test: (v: string) => v.length >= 8 },
@@ -183,15 +180,46 @@ let notifications: NotificationPrefs = {
 let billing: Billing = {
   plan: "premium",
   price: 5,
+  interval: "monthly",
   nextBilling: iso(17),
   cancelled: false,
   paymentMethods: [
     { id: "pm_1", type: "Visa", last4: "4242", expiry: "12/2026", primary: true },
   ],
   history: [
-    { id: "in_3", date: iso(-3), amount: 5, plan: "Premium", status: "paid" },
-    { id: "in_2", date: iso(-33), amount: 5, plan: "Premium", status: "paid" },
-    { id: "in_1", date: iso(-63), amount: 0, plan: "Free", status: "paid" },
+    {
+      id: "in_3",
+      date: iso(-3),
+      amount: 5,
+      plan: "Premium",
+      status: "paid",
+      periodStart: iso(-3),
+      periodEnd: iso(27),
+      lines: [
+        { label: "Premium plan — monthly", amount: 5 },
+        { label: "Conversion fees (8%)", amount: 0 },
+      ],
+    },
+    {
+      id: "in_2",
+      date: iso(-33),
+      amount: 5,
+      plan: "Premium",
+      status: "paid",
+      periodStart: iso(-33),
+      periodEnd: iso(-3),
+      lines: [{ label: "Premium plan — monthly", amount: 5 }],
+    },
+    {
+      id: "in_1",
+      date: iso(-63),
+      amount: 0,
+      plan: "Free",
+      status: "paid",
+      periodStart: iso(-63),
+      periodEnd: iso(-33),
+      lines: [{ label: "Free plan", amount: 0 }],
+    },
   ],
 };
 
@@ -251,6 +279,7 @@ function randomToken(length: number) {
 export const settingsApi = {
   async getAll() {
     await wait(220);
+    setActiveTier(profile.plan);
     return {
       profile: clone(profile),
       notifications: clone(notifications),
@@ -295,11 +324,13 @@ export const settingsApi = {
     return clone(notifications);
   },
 
-  async changePlan(plan: "free" | "premium") {
+  async changePlan(plan: PlanTier, interval: "monthly" | "annual" = "monthly") {
     await wait(600);
-    const price = PLANS.find((p) => p.id === plan)?.price ?? 0;
-    billing = { ...billing, plan, price, cancelled: false, nextBilling: iso(30) };
+    const tier = TIER_LIMITS[plan];
+    const price = interval === "annual" ? tier.annualPrice : tier.price;
+    billing = { ...billing, plan, price, interval, cancelled: false, nextBilling: iso(interval === "annual" ? 365 : 30) };
     profile = { ...profile, plan };
+    setActiveTier(plan);
     return clone(billing);
   },
 

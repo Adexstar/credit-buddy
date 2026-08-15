@@ -10,6 +10,8 @@ import { PolicyWizard } from "@/components/policies/PolicyWizard";
 import { PolicyDeleteConfirm, PolicySimulator } from "@/components/policies/PolicySimulator";
 import { PrimaryButton } from "@/components/policies/ui";
 import type { Policy } from "@/lib/policies";
+import { TierBadge, UpgradePrompt } from "@/components/common/UpgradePrompt";
+import { limitLabel, tierName } from "@/lib/tiers";
 import { routingRules } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/policies")({
@@ -57,6 +59,10 @@ function PoliciesPage() {
     deletePolicy,
     togglePolicy,
     reorderPolicies,
+    tier,
+    activeCount,
+    policyLimit,
+    atLimit,
   } = usePolicies();
 
   const [simulating, setSimulating] = useState<Policy | null>(null);
@@ -95,8 +101,6 @@ function PoliciesPage() {
     setOverId(null);
   };
 
-  const activeCount = policies.filter((p) => p.isActive).length;
-
   return (
     <AppShell
       title="Automation policies"
@@ -104,6 +108,7 @@ function PoliciesPage() {
       actions={
         <>
           <DemoDataPill />
+          <TierBadge tier={tier} />
           <PrimaryButton onClick={() => openEditor(null)}>
             <Plus size={16} /> Add new policy
           </PrimaryButton>
@@ -120,11 +125,34 @@ function PoliciesPage() {
             title="Rules"
             action={
               <span className="vault-mono text-xs text-vault-faint">
-                {activeCount} of {policies.length} active
+                {activeCount} of {limitLabel(policyLimit)} active · {tierName(tier)}
               </span>
             }
           >
             <div className="space-y-5">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-vault-muted">
+                  <span>Active policies</span>
+                  <span className="vault-mono">
+                    {activeCount} / {limitLabel(policyLimit)}
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full border border-vault-border bg-vault-bg">
+                  <div
+                    className={`h-full rounded-full transition-all ${atLimit ? "bg-vault-amber" : "bg-vault-teal"}`}
+                    style={{ width: `${Math.min(100, (activeCount / Math.max(1, policyLimit)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {atLimit && (
+                <UpgradePrompt
+                  requiredTier={tier === "free" ? "premium" : "pro"}
+                  reason={`You have used all ${limitLabel(policyLimit)} active policies on ${tierName(tier)}.`}
+                  compact
+                />
+              )}
+
               <PolicyFilters
                 searchQuery={searchQuery}
                 onSearch={setSearchQuery}
@@ -181,10 +209,14 @@ function PoliciesPage() {
             else await createPolicy(draft);
           }}
           onTest={(draft) => setSimulating(draft)}
+          tier={tier}
+          policies={policies}
         />
       )}
 
-      {simulating && <PolicySimulator policy={simulating} onClose={() => setSimulating(null)} />}
+      {simulating && (
+        <PolicySimulator policy={simulating} tier={tier} onClose={() => setSimulating(null)} />
+      )}
 
       {pendingDelete && (
         <PolicyDeleteConfirm

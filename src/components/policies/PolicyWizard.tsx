@@ -64,6 +64,10 @@ export function PolicyWizard({
   const selectedApps = specific ? (draft.scope as string[]) : [];
 
   const submit = async () => {
+    if (typeLocked) {
+      toast.warning(`${tierName(requiredTierFor(draft.type))} plan required for this policy type.`);
+      return;
+    }
     if (errors.length) {
       toast.warning("Policy configuration incomplete. Please fill all required fields.");
       return;
@@ -108,13 +112,13 @@ export function PolicyWizard({
               <GhostButton onClick={() => onTest(draft)}>
                 <FlaskConical size={16} /> Test policy
               </GhostButton>
-              <PrimaryButton disabled={errors.length > 0} onClick={() => setStep(3)}>
+              <PrimaryButton disabled={errors.length > 0 || typeLocked} onClick={() => setStep(3)}>
                 Review <ArrowRight size={16} />
               </PrimaryButton>
             </>
           )}
           {step === 3 && (
-            <PrimaryButton disabled={saving || errors.length > 0} onClick={submit}>
+            <PrimaryButton disabled={saving || errors.length > 0 || typeLocked} onClick={submit}>
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               {saving ? "Saving…" : editing ? "Save changes" : "Create policy"}
             </PrimaryButton>
@@ -440,6 +444,190 @@ export function PolicyWizard({
                 Block requests until next month
               </label>
             </div>
+          )}
+
+          {draft.type === "smart-convert" && (
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label="Optimise for">
+                <select
+                  className={inputClass}
+                  value={draft.optimizeFor ?? "value"}
+                  onChange={(e) => patch({ optimizeFor: e.target.value as Policy["optimizeFor"] })}
+                >
+                  <option value="value">Highest value</option>
+                  <option value="expiry">Soonest expiry</option>
+                  <option value="usage">Actual usage patterns</option>
+                </select>
+              </Field>
+              <Field label={`Minimum confidence: ${Math.round((draft.minConfidence ?? 0.7) * 100)}%`}>
+                <input
+                  type="range"
+                  min={50}
+                  max={100}
+                  value={Math.round((draft.minConfidence ?? 0.7) * 100)}
+                  onChange={(e) => patch({ minConfidence: Number(e.target.value) / 100 })}
+                  className="w-full accent-vault-teal"
+                />
+              </Field>
+              <Field label="Only convert above (credits)">
+                <input
+                  type="number"
+                  min={0}
+                  className={inputClass}
+                  value={draft.minRemaining ?? 0}
+                  onChange={(e) => patch({ minRemaining: Number(e.target.value) })}
+                />
+              </Field>
+            </div>
+          )}
+
+          {draft.type === "orchestration" && (
+            <div className="space-y-4">
+              <Field label="Chain mode">
+                <div className="flex gap-2">
+                  {(["sequential", "parallel"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => patch({ chainMode: mode })}
+                      className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${
+                        (draft.chainMode ?? "sequential") === mode
+                          ? "bg-vault-teal/10 text-vault-teal"
+                          : "border border-vault-border text-vault-muted"
+                      }`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Chained policies" hint="Run these in priority order when this policy fires">
+                <div className="flex flex-wrap gap-2">
+                  {policies
+                    .filter((p) => p.id && p.id !== draft.id)
+                    .map((p) => {
+                      const on = (draft.chainedPolicyIds ?? []).includes(p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() =>
+                            patch({
+                              chainedPolicyIds: on
+                                ? (draft.chainedPolicyIds ?? []).filter((x) => x !== p.id)
+                                : [...(draft.chainedPolicyIds ?? []), p.id],
+                            })
+                          }
+                          className={`rounded-xl border px-3 py-1.5 text-xs transition ${
+                            on
+                              ? "border-vault-teal/50 bg-vault-teal/10 text-vault-teal"
+                              : "border-vault-border text-vault-muted hover:text-vault-foreground"
+                          }`}
+                        >
+                          {p.name}
+                        </button>
+                      );
+                    })}
+                  {policies.length === 0 && <span className="text-xs text-vault-faint">No other policies yet.</span>}
+                </div>
+              </Field>
+            </div>
+          )}
+
+          {draft.type === "webhook" && (
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Field label="Endpoint URL" hint="Must be https://">
+                  <input
+                    className={inputClass}
+                    placeholder="https://api.example.com/hooks/credits"
+                    value={draft.webhookUrl ?? ""}
+                    onChange={(e) => patch({ webhookUrl: e.target.value })}
+                  />
+                </Field>
+              </div>
+              <Field label="Signing secret" hint="Sent as X-Signature header">
+                <input
+                  className={inputClass}
+                  value={draft.webhookSecret ?? ""}
+                  onChange={(e) => patch({ webhookSecret: e.target.value })}
+                />
+              </Field>
+              <Field label="Max executions per day">
+                <input
+                  type="number"
+                  min={0}
+                  className={inputClass}
+                  value={draft.maxExecutionsPerDay ?? 0}
+                  onChange={(e) => patch({ maxExecutionsPerDay: Number(e.target.value) })}
+                />
+              </Field>
+            </div>
+          )}
+
+          <div className="space-y-3 rounded-xl border border-vault-border bg-vault-bg/40 p-4">
+            <p className="flex items-center gap-2 text-xs tracking-wide text-vault-faint uppercase">
+              Advanced {!customTriggers && <Lock size={12} />}
+            </p>
+            {customTriggers ? (
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Cooldown (minutes)">
+                  <input
+                    type="number"
+                    min={0}
+                    className={inputClass}
+                    value={draft.cooldownMinutes ?? 0}
+                    onChange={(e) => patch({ cooldownMinutes: Number(e.target.value) })}
+                  />
+                </Field>
+                <Field label="Max executions per day" hint="0 = unlimited">
+                  <input
+                    type="number"
+                    min={0}
+                    className={inputClass}
+                    value={draft.maxExecutionsPerDay ?? 0}
+                    onChange={(e) => patch({ maxExecutionsPerDay: Number(e.target.value) })}
+                  />
+                </Field>
+                {hasFeature(tier, "priority_execution") && (
+                  <Field label="Priority" hint="Higher runs first">
+                    <input
+                      type="number"
+                      min={0}
+                      className={inputClass}
+                      value={draft.priority ?? 0}
+                      onChange={(e) => patch({ priority: Number(e.target.value) })}
+                    />
+                  </Field>
+                )}
+                {hasFeature(tier, "custom_triggers") && (
+                  <div className="sm:col-span-2">
+                    <Field label="Extra conditions" hint="e.g. balance > 100 AND app = openai">
+                      <input
+                        className={inputClass}
+                        value={draft.conditions ?? ""}
+                        onChange={(e) => patch({ conditions: e.target.value })}
+                      />
+                    </Field>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <UpgradePrompt
+                requiredTier="premium"
+                reason="Cooldowns, execution caps and custom conditions are locked on Free."
+                compact
+              />
+            )}
+          </div>
+
+          {typeLocked && (
+            <UpgradePrompt
+              requiredTier={requiredTierFor(draft.type)}
+              reason="This policy type is not available on your current plan."
+              compact
+            />
           )}
 
           {errors.length > 0 && (

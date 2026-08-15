@@ -8,9 +8,18 @@ import {
   type Scenario,
   type SimulationResult,
 } from "@/lib/policies";
+import { platformFee, tierName, type PlanTier } from "@/lib/tiers";
 import { Field, GhostButton, Modal, PrimaryButton, inputClass } from "./ui";
 
-export function PolicySimulator({ policy, onClose }: { policy: Policy; onClose: () => void }) {
+export function PolicySimulator({
+  policy,
+  onClose,
+  tier = "free",
+}: {
+  policy: Policy;
+  onClose: () => void;
+  tier?: PlanTier;
+}) {
   const [scenario, setScenario] = useState<Scenario>(defaultScenario(policy.type));
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [isRunning, setRunning] = useState(false);
@@ -88,6 +97,40 @@ export function PolicySimulator({ policy, onClose }: { policy: Policy; onClose: 
           </Field>
         )}
 
+        {(policy.type === "smart-convert" || policy.type === "orchestration") && (
+          <>
+            <Field label={`Days until expiry: ${scenario.daysToExpiry ?? 0}`}>
+              <input
+                type="range"
+                min={0}
+                max={30}
+                value={scenario.daysToExpiry ?? 0}
+                onChange={(e) => patch({ daysToExpiry: Number(e.target.value) })}
+                className="w-full accent-vault-teal"
+              />
+            </Field>
+            <Field label="Bucket balance (credits)">
+              <input
+                type="number"
+                className={inputClass}
+                value={scenario.balance ?? 0}
+                onChange={(e) => patch({ balance: Number(e.target.value) })}
+              />
+            </Field>
+          </>
+        )}
+
+        {policy.type === "webhook" && (
+          <Field label="Simulated balance (USD)">
+            <input
+              type="number"
+              className={inputClass}
+              value={scenario.balance ?? 0}
+              onChange={(e) => patch({ balance: Number(e.target.value) })}
+            />
+          </Field>
+        )}
+
         {policy.type === "ceiling" && (
           <Field label="Usage this month (USD)">
             <input
@@ -123,6 +166,10 @@ export function PolicySimulator({ policy, onClose }: { policy: Policy; onClose: 
                 <p>Impact: {result.impact}</p>
               </div>
             )}
+            <p className="mt-3 text-xs text-vault-amber">
+              Conversion fee applied on your {tierName(tier)} plan: {Math.round(platformFee(tier) * 100)}%
+              {tier !== "pro" && " — Pro pays 5%."}
+            </p>
             <div className="mt-3 text-xs text-vault-faint">
               Evaluation steps
               <ul className="mt-1 list-disc space-y-0.5 pl-4">

@@ -1,6 +1,8 @@
 import { mockBuckets, type CreditBucket } from "./mock-data";
 import { api } from "./api";
+import { activePlatformFee } from "./tiers";
 
+/** Default fee; the effective fee depends on the active plan tier. */
 export const PLATFORM_FEE = 0.1;
 export const MIN_CONVERSION = 10;
 export const TARGET_EXPIRY_DAYS = 90;
@@ -54,7 +56,7 @@ export interface ConversionQuote {
 export function quote(amount: number, sourceAppId: string, targetAppId: string): ConversionQuote {
   const rate = getConversionRate(sourceAppId, targetAppId);
   const gross = amount * rate;
-  const fee = gross * PLATFORM_FEE;
+  const fee = gross * activePlatformFee();
   return {
     rate,
     rateSource: getRateSource(sourceAppId, targetAppId),

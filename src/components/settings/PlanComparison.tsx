@@ -1,5 +1,6 @@
+import { Fragment } from "react";
 import { Check, Minus, Star } from "lucide-react";
-import { TIERS, limitLabel, type PlanTier, type TierFeature } from "@/lib/tiers";
+import { TIERS, limitLabel, type PlanTier } from "@/lib/tiers";
 
 type Group = {
   group: string;
@@ -76,9 +77,6 @@ export function PlanComparison({
   interval?: "monthly" | "annual";
   onIntervalChange?: (interval: "monthly" | "annual") => void;
 }) {
-  const featureKeys: TierFeature[] = [];
-  void featureKeys;
-
   return (
     <div className="space-y-3">
       {onIntervalChange && (
@@ -125,8 +123,8 @@ export function PlanComparison({
           </thead>
           <tbody>
             {GROUPS.map((group) => (
-              <>
-                <tr key={group.group} className="border-t border-vault-border bg-vault-bg/40">
+              <Fragment key={group.group}>
+                <tr className="border-t border-vault-border bg-vault-bg/40">
                   <td
                     colSpan={TIERS.length + 1}
                     className="px-4 py-2 text-[11px] tracking-wide text-vault-faint uppercase"
@@ -144,7 +142,7 @@ export function PlanComparison({
                     ))}
                   </tr>
                 ))}
-              </>
+              </Fragment>
             ))}
             <tr className="border-t border-vault-border">
               <td className="px-4 py-3" />

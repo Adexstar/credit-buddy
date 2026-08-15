@@ -9,11 +9,17 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { policyApi, scopeLabel, type Policy, type PolicyType } from "@/lib/policies";
+import { settingsApi } from "@/lib/settings";
+import { canCreatePolicy, maxPolicies, type PlanTier } from "@/lib/tiers";
 
 interface PolicyContextValue {
   policies: Policy[];
   filtered: Policy[];
   loading: boolean;
+  tier: PlanTier;
+  activeCount: number;
+  policyLimit: number;
+  atLimit: boolean;
   searchQuery: string;
   setSearchQuery: (v: string) => void;
   filterType: PolicyType | "all";
@@ -46,6 +52,17 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
   const [isEditorOpen, setEditorOpen] = useState(false);
   const [isSimulatorOpen, setSimulatorOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Policy | null>(null);
+  const [tier, setTier] = useState<PlanTier>("free");
+
+  useEffect(() => {
+    let cancelled = false;
+    void settingsApi.getAll().then((data) => {
+      if (!cancelled) setTier(data.profile.plan);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
     const list = await policyApi.getAll();
@@ -69,11 +86,14 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
 
   const createPolicy = useCallback(
     async (data: Policy) => {
+      if (data.isActive && !canCreatePolicy(tier, policies.filter((p) => p.isActive).length)) {
+        throw new Error(`Active policy limit reached (${maxPolicies(tier)}). Upgrade your plan to add more.`);
+      }
       await policyApi.create(data);
       await refresh();
       toast.success("Policy created successfully");
     },
-    [refresh],
+    [refresh, tier, policies],
   );
 
   const updatePolicy = useCallback(
@@ -100,6 +120,10 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
       const policy = policies.find((p) => p.id === id);
       if (!policy) return;
       const next = !policy.isActive;
+      if (next && !canCreatePolicy(tier, policies.filter((p) => p.isActive).length)) {
+        toast.error(`Active policy limit reached (${maxPolicies(tier)}). Upgrade your plan to activate more.`);
+        return;
+      }
       setPolicies((prev) => prev.map((p) => (p.id === id ? { ...p, isActive: next } : p)));
       try {
         await policyApi.toggle(id, next);
@@ -117,7 +141,7 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
         toast.error(`Failed to save policy: ${(error as Error).message}`);
       }
     },
-    [policies],
+    [policies, tier],
   );
 
   const reorderPolicies = useCallback(async (order: string[]) => {
@@ -125,10 +149,18 @@ export function PolicyProvider({ children }: { children: ReactNode }) {
     await policyApi.reorder(order);
   }, []);
 
+  const activeCount = policies.filter((p) => p.isActive).length;
+  const policyLimit = maxPolicies(tier);
+  const atLimit = !canCreatePolicy(tier, activeCount);
+
   const value: PolicyContextValue = {
     policies,
     filtered,
     loading,
+    tier,
+    activeCount,
+    policyLimit,
+    atLimit,
     searchQuery,
     setSearchQuery,
     filterType,

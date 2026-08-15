@@ -4,14 +4,16 @@ Bring the dashboard in line with the pasted policy-engine spec: three plans (Fre
 
 ## Plans and limits
 
-| | Free | Premium | Pro |
-|---|---|---|---|
-| Price | $0 | $9/mo | $29/mo |
-| Max active policies | 2 | 15 | Unlimited |
-| Platform conversion fee | 10% | 8% | 5% |
-| Team members | 1 | 3 | Unlimited |
-| Channels | Email | Email + Push | Email + Push + SMS |
-| Extras | — | Spend ceiling, policy groups, custom triggers | Smart (AI) conversion, orchestration, webhooks, policy API, advanced analytics |
+
+| &nbsp;                  | Free  | Premium                                       | Pro                                                                            |
+| ----------------------- | ----- | --------------------------------------------- | ------------------------------------------------------------------------------ |
+| Price                   | $0    | $5/mo                                         | $15/mo                                                                         |
+| Max active policies     | 2     | 15                                            | Unlimited                                                                      |
+| Platform conversion fee | 10%   | 8%                                            | 5%                                                                             |
+| Team members            | 1     | 3                                             | Unlimited                                                                      |
+| Channels                | Email | Email + Push                                  | Email + Push + SMS                                                             |
+| Extras                  | —     | Spend ceiling, policy groups, custom triggers | Smart (AI) conversion, orchestration, webhooks, policy API, advanced analytics |
+
 
 ## Policies improvements
 

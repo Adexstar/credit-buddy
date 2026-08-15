@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useSettingsContext } from "@/context/SettingsContext";
-import { settingsApi, type NotificationPrefs, type Profile } from "@/lib/settings";
+import { settingsApi, type NotificationPrefs, type PlanTier, type Profile } from "@/lib/settings";
 
 /** Profile, notification and billing operations wired to the settings API. */
 export function useSettings() {
@@ -46,8 +46,8 @@ export function useSettings() {
   }, [run, setNotifications]);
 
   const changePlan = useCallback(
-    async (plan: "free" | "premium") => {
-      const next = await run(() => settingsApi.changePlan(plan), "⭐ Plan updated successfully");
+    async (plan: PlanTier, interval: "monthly" | "annual" = "monthly") => {
+      const next = await run(() => settingsApi.changePlan(plan, interval), "⭐ Plan updated successfully");
       if (next) {
         setBilling(next);
         setProfile({ ...(ctx.profile as Profile), plan });

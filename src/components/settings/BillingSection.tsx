@@ -194,8 +194,28 @@ export function BillingSection() {
         </ul>
       </div>
 
+      <SubHeading>Usage this period</SubHeading>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          ["Active policies", `${limitLabel(TIER_LIMITS[billing.plan].maxPolicies)} allowed`],
+          ["Team seats", `${limitLabel(TIER_LIMITS[billing.plan].teamMembers)} allowed`],
+          ["Conversion fee", `${Math.round(TIER_LIMITS[billing.plan].fee * 100)}%`],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-xl border border-vault-border bg-vault-bg/40 p-4">
+            <p className="text-xs text-vault-faint">{label}</p>
+            <p className="mt-1 font-display text-base font-semibold text-vault-foreground">{value}</p>
+          </div>
+        ))}
+      </div>
+
       <SubHeading>Plan comparison</SubHeading>
-      <PlanComparison currentPlan={billing.plan} onSelect={(p) => void changePlan(p)} busy={saving} />
+      <PlanComparison
+        currentPlan={billing.plan}
+        interval={billing.interval ?? "monthly"}
+        onIntervalChange={(interval) => void changePlan(billing.plan, interval)}
+        onSelect={(p) => void changePlan(p)}
+        busy={saving}
+      />
 
       <SubHeading>Payment method</SubHeading>
       <div className="space-y-3 rounded-xl border border-vault-border bg-vault-bg/40 p-4">

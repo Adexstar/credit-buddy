@@ -167,7 +167,7 @@ function PoliciesPage() {
                   filtered={policies.length > 0}
                 />
               ) : (
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="grid min-w-0 gap-4 lg:grid-cols-2 [&>*]:min-w-0">
                   {filtered.map((policy) => (
                     <PolicyCard
                       key={policy.id}

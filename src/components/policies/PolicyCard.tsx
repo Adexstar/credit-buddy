@@ -74,20 +74,22 @@ export function PolicyCard({
         e.preventDefault();
         onDrop();
       }}
-      className={`vault-raised p-4 transition ${dragging ? "opacity-50" : ""}`}
+      className={`vault-raised w-full min-w-0 overflow-hidden p-4 transition ${dragging ? "opacity-50" : ""}`}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex min-w-0 items-start gap-3">
         <PolicyTypeIcon type={policy.type} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate font-display text-base font-semibold text-vault-foreground">{policy.name}</h3>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h3 className="min-w-0 max-w-full break-words font-display text-base font-semibold text-vault-foreground">
+              {policy.name}
+            </h3>
             {typeMeta && typeMeta.requiredTier !== "free" && <TierBadge tier={typeMeta.requiredTier} />}
           </div>
-          <p className="mt-1 text-sm leading-relaxed text-vault-muted">{typeMeta?.blurb}</p>
+          <p className="mt-1 break-words text-sm leading-relaxed text-vault-muted">{typeMeta?.blurb}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
           <span
-            className={`rounded-full px-2.5 py-1 text-xs ${
+            className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs ${
               policy.isActive
                 ? "bg-vault-green/10 text-vault-green"
                 : "border border-vault-border text-vault-faint"
@@ -114,37 +116,38 @@ export function PolicyCard({
         </div>
       </div>
 
-      <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-xs">
-        <div>
+      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-xs sm:grid-cols-3">
+        <div className="min-w-0">
           <dt className="text-vault-faint">Scope</dt>
-          <dd className="mt-0.5 text-vault-foreground">{scopeLabel(policy.scope)}</dd>
+          <dd className="mt-0.5 break-words text-vault-foreground">{scopeLabel(policy.scope)}</dd>
         </div>
-        <div>
+        <div className="min-w-0">
           <dt className="text-vault-faint">Trigger</dt>
-          <dd className="vault-mono mt-0.5 text-vault-foreground">{triggerLabel(policy)}</dd>
+          <dd className="vault-mono mt-0.5 break-words text-vault-foreground">{triggerLabel(policy)}</dd>
         </div>
-        <div>
+        <div className="col-span-2 min-w-0 sm:col-span-1">
           <dt className="text-vault-faint">Action</dt>
-          <dd className="mt-0.5 text-vault-foreground">{actionLabel(policy)}</dd>
+          <dd className="mt-0.5 break-words text-vault-foreground">{actionLabel(policy)}</dd>
         </div>
       </dl>
 
-      <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2 rounded-xl border border-vault-border bg-vault-bg/40 px-3 py-2 text-xs">
-        <div>
+      <dl className="mt-3 grid grid-cols-3 gap-x-4 gap-y-2 rounded-xl border border-vault-border bg-vault-bg/40 px-3 py-2 text-xs">
+        <div className="min-w-0">
           <dt className="text-vault-faint">Triggers</dt>
           <dd className="vault-mono mt-0.5 text-vault-foreground">{policy.triggerCount ?? 0}</dd>
         </div>
-        <div>
+        <div className="min-w-0">
           <dt className="text-vault-faint">Success</dt>
           <dd className="vault-mono mt-0.5 text-vault-green">{Math.round((policy.successRate ?? 1) * 100)}%</dd>
         </div>
-        <div>
+        <div className="min-w-0">
           <dt className="text-vault-faint">Last run</dt>
-          <dd className="mt-0.5 text-vault-foreground">
+          <dd className="mt-0.5 break-words text-vault-foreground">
             {policy.lastTriggeredAt ? new Date(policy.lastTriggeredAt).toLocaleDateString() : "Never"}
           </dd>
         </div>
       </dl>
+
 
       <div className="mt-4 flex items-center gap-2 border-t border-vault-border pt-3">
         <button

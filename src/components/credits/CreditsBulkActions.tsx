@@ -1,4 +1,4 @@
-import { Download, Repeat, Snowflake, Trash2, X, CheckCheck } from "lucide-react";
+import { Download, Snowflake, Trash2, X, CheckCheck } from "lucide-react";
 import type { CreditBucket } from "@/lib/credits";
 
 const btn =
@@ -6,7 +6,6 @@ const btn =
 
 export function CreditsBulkActions({
   selected,
-  onConvert,
   onFreeze,
   onDelete,
   onExport,
@@ -15,7 +14,6 @@ export function CreditsBulkActions({
   busy,
 }: {
   selected: CreditBucket[];
-  onConvert: () => void;
   onFreeze: () => void;
   onDelete: () => void;
   onExport: () => void;
@@ -31,9 +29,6 @@ export function CreditsBulkActions({
       <span className="mr-1 text-sm font-medium text-vault-teal">
         {selected.length} bucket{selected.length === 1 ? "" : "s"} selected
       </span>
-      <button type="button" className={btn} onClick={onConvert} disabled={busy}>
-        <Repeat size={13} /> Convert selected
-      </button>
       <button type="button" className={btn} onClick={onFreeze} disabled={busy}>
         <Snowflake size={13} /> {allFrozen ? "Unfreeze" : "Freeze"} selected
       </button>

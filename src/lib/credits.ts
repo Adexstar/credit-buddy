@@ -5,11 +5,10 @@ import {
   type CreditTransaction,
 } from "./mock-data";
 import { api } from "./api";
-import { getConversionRate, appIdFromName, PLATFORM_FEE } from "./conversions";
 
 export type BucketStatus = "active" | "expiring_soon" | "expiring_today" | "expired" | "empty" | "frozen";
 
-export const SOURCE_TYPES = ["Subscription", "Promo", "Top-Up", "Grant", "Converted", "Reconciliation"] as const;
+export const SOURCE_TYPES = ["Subscription", "Promo", "Top-Up", "Grant"] as const;
 
 export const STATUS_LABEL: Record<BucketStatus, string> = {
   active: "Active",
@@ -223,15 +222,6 @@ export interface AddCreditsInput {
   expiryDays: number;
 }
 
-export interface BulkConvertPlan {
-  targetAppName: string;
-  rate: number;
-  totalGross: number;
-  totalFee: number;
-  totalNet: number;
-  lines: Array<{ bucketId: string; appName: string; amount: number; net: number }>;
-}
-
 export const creditsApi = {
   async getBuckets(): Promise<CreditBucket[]> {
     await wait(220);
@@ -310,69 +300,6 @@ export const creditsApi = {
       });
       b.remaining = 0;
     });
-  },
-
-  planBulkConvert(buckets: CreditBucket[], targetAppName: string): BulkConvertPlan {
-    const lines = buckets.map((b) => {
-      const rate = getConversionRate(appIdFromName(b.appName), appIdFromName(targetAppName));
-      const gross = b.remaining * rate;
-      return {
-        bucketId: b.id,
-        appName: b.appName,
-        amount: Number(b.remaining.toFixed(2)),
-        net: Number((gross * (1 - PLATFORM_FEE)).toFixed(2)),
-      };
-    });
-    const first = buckets[0];
-    const rate = first ? getConversionRate(appIdFromName(first.appName), appIdFromName(targetAppName)) : 0;
-    const totalGross = buckets.reduce(
-      (s, b) => s + b.remaining * getConversionRate(appIdFromName(b.appName), appIdFromName(targetAppName)),
-      0,
-    );
-    return {
-      targetAppName,
-      rate,
-      totalGross: Number(totalGross.toFixed(2)),
-      totalFee: Number((totalGross * PLATFORM_FEE).toFixed(2)),
-      totalNet: Number((totalGross * (1 - PLATFORM_FEE)).toFixed(2)),
-      lines,
-    };
-  },
-
-  async bulkConvert(buckets: CreditBucket[], targetAppName: string): Promise<BulkConvertPlan> {
-    const plan = this.planBulkConvert(buckets, targetAppName);
-    await wait(900);
-    buckets.forEach((b) => {
-      const live = mockBuckets.find((x) => x.id === b.id);
-      if (live) live.remaining = 0;
-    });
-    const net = plan.totalNet;
-    const existing = mockBuckets.find((b) => b.appName === targetAppName && b.sourceType === "Converted");
-    if (existing) {
-      existing.remaining = Number((existing.remaining + net).toFixed(2));
-      existing.original = Number((existing.original + net).toFixed(2));
-    } else {
-      mockBuckets.push({
-        id: `b-conv-${Date.now()}`,
-        appName: targetAppName,
-        sourceType: "Converted",
-        remaining: net,
-        original: net,
-        softExpiry: new Date(Date.now() + 90 * 86_400_000).toISOString(),
-        createdAt: new Date().toISOString(),
-        peakRestricted: false,
-        frozen: false,
-      });
-    }
-    api.addActivity({
-      id: `act-bulk-${Date.now()}`,
-      kind: "conversion",
-      message: `Bulk converted ${buckets.length} buckets into ${net.toFixed(2)} ${targetAppName} credits`,
-      appName: targetAppName,
-      timestamp: new Date().toISOString(),
-      amount: net,
-    });
-    return plan;
   },
 };
 

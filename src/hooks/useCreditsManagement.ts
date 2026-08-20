@@ -87,11 +87,6 @@ export function useCreditsManagement() {
     markUsed: (ids: string[]) => run("Marked as used", () => creditsApi.markAsUsed(ids)),
     addCredits: (input: Parameters<typeof creditsApi.addCredits>[0]) =>
       run(`Added ${input.amount.toFixed(2)} ${input.appName} credits`, () => creditsApi.addCredits(input)),
-    bulkConvert: (rows: CreditBucket[], target: string) =>
-      run(`Converted ${rows.length} buckets to ${target}`, async () => {
-        await creditsApi.bulkConvert(rows, target);
-        clearSelection();
-      }),
     exportCsv: (rows?: CreditBucket[]) => {
       const data = rows?.length ? rows : visible;
       exportBuckets(data);

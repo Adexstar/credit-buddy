@@ -4,15 +4,15 @@ import { Coins, Download, LayoutGrid, Plus, Rows3 } from "lucide-react";
 import { AppShell, DemoDataPill } from "@/components/layout/AppShell";
 import { Panel } from "@/components/dashboard/primitives";
 import { UsageChart } from "@/components/dashboard/UsageChart";
-import { CreditConversionModal } from "@/components/conversion/CreditConversionModal";
 import { CreditsFilters } from "@/components/credits/CreditsFilters";
 import { CreditsGrid, CreditsTable } from "@/components/credits/CreditsViews";
 import { CreditsBulkActions } from "@/components/credits/CreditsBulkActions";
 import { CreditsAnalytics } from "@/components/credits/CreditsAnalytics";
 import { CreditsHistory } from "@/components/credits/CreditsHistory";
 import { CreditsEmptyState, CreditsLoadingState } from "@/components/credits/CreditsStates";
-import { AddCreditsModal, BulkConvertModal, ConfirmDeleteModal } from "@/components/credits/CreditsModals";
+import { AddCreditsModal, ConfirmDeleteModal } from "@/components/credits/CreditsModals";
 import { BucketDetailPanel } from "@/components/credits/BucketDetailPanel";
+import { SpendOptionsPanel } from "@/components/credits/SpendOptionsPanel";
 import { useCreditsManagement } from "@/hooks/useCreditsManagement";
 import { PROVIDERS } from "@/lib/mock-data";
 import { api, type ConnectedApp, type TimeRange, type UsageData } from "@/lib/api";
@@ -26,10 +26,10 @@ export const Route = createFileRoute("/credits")({
       {
         name: "description",
         content:
-          "Manage every credit bucket: filter by app, status and source, run bulk conversions, add credits and export your ledger to CSV.",
+          "Manage every credit bucket: filter by app, status and source, track expiry, add credits and export your ledger to CSV.",
       },
       { property: "og:title", content: "Credits management — Credit Bank" },
-      { property: "og:description", content: "Filter, sort, convert and export credit buckets across every provider." },
+      { property: "og:description", content: "Filter, sort, track and export credit buckets across every provider." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -52,9 +52,8 @@ function CreditsPage() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [range, setRange] = useState<TimeRange>("7d");
   const [detail, setDetail] = useState<CreditBucket | null>(null);
-  const [convertBucketId, setConvertBucketId] = useState<string | null>(null);
+  const [spendBucket, setSpendBucket] = useState<CreditBucket | null>(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [showBulkConvert, setShowBulkConvert] = useState(false);
   const [deleteIds, setDeleteIds] = useState<string[] | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -210,7 +209,6 @@ function CreditsPage() {
       <CreditsBulkActions
         selected={credits.selectedBuckets}
         busy={credits.busy}
-        onConvert={() => setShowBulkConvert(true)}
         onFreeze={() => void credits.freeze(credits.selected, !credits.selectedBuckets.every((b) => b.frozen))}
         onDelete={() => setDeleteIds(credits.selected)}
         onExport={() => credits.exportCsv(credits.selectedBuckets)}
@@ -230,9 +228,9 @@ function CreditsPage() {
         <BucketDetailPanel
           bucket={credits.buckets.find((b) => b.id === detail.id) ?? detail}
           onClose={() => setDetail(null)}
-          onConvert={(bucket) => {
+          onSpendOptions={(bucket) => {
             setDetail(null);
-            setConvertBucketId(bucket.id);
+            setSpendBucket(bucket);
           }}
           onFreeze={(bucket) => void credits.freeze([bucket.id], !bucket.frozen)}
           onDelete={(bucket) => {
@@ -246,27 +244,12 @@ function CreditsPage() {
         <AddCreditsModal apps={appNames} onClose={() => setShowAdd(false)} onAdd={(input) => void credits.addCredits(input)} />
       )}
 
-      {showBulkConvert && (
-        <BulkConvertModal
-          buckets={credits.selectedBuckets}
-          apps={appNames}
-          onClose={() => setShowBulkConvert(false)}
-          onConfirm={(target) => void credits.bulkConvert(credits.selectedBuckets, target)}
-        />
-      )}
 
       {deleteIds && (
         <ConfirmDeleteModal count={deleteIds.length} onClose={() => setDeleteIds(null)} onConfirm={() => void credits.remove(deleteIds)} />
       )}
 
-      <CreditConversionModal
-        isOpen={convertBucketId !== null}
-        onClose={() => setConvertBucketId(null)}
-        buckets={credits.buckets}
-        apps={apps}
-        initialBucketId={convertBucketId ?? undefined}
-        onConverted={() => void credits.reload()}
-      />
+      {spendBucket && <SpendOptionsPanel bucket={spendBucket} onClose={() => setSpendBucket(null)} />}
     </AppShell>
   );
 }

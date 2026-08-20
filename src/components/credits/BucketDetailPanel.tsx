@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Repeat, Snowflake, Trash2, X } from "lucide-react";
+import { Lightbulb, Snowflake, Trash2, X } from "lucide-react";
 import {
   STATUS_LABEL,
   bucketStatus,
@@ -15,13 +15,13 @@ import { CreditsHistory } from "./CreditsHistory";
 export function BucketDetailPanel({
   bucket,
   onClose,
-  onConvert,
+  onSpendOptions,
   onFreeze,
   onDelete,
 }: {
   bucket: CreditBucket;
   onClose: () => void;
-  onConvert: (bucket: CreditBucket) => void;
+  onSpendOptions: (bucket: CreditBucket) => void;
   onFreeze: (bucket: CreditBucket) => void;
   onDelete: (bucket: CreditBucket) => void;
 }) {
@@ -110,10 +110,10 @@ export function BucketDetailPanel({
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => onConvert(bucket)}
+              onClick={() => onSpendOptions(bucket)}
               className="inline-flex items-center gap-1.5 rounded-xl bg-vault-teal px-3 py-2 text-xs font-medium text-vault-bg transition hover:bg-vault-teal-deep"
             >
-              <Repeat size={13} /> Convert
+              <Lightbulb size={13} /> Spend options
             </button>
             <button
               type="button"

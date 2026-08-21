@@ -62,7 +62,7 @@ export function PolicyEmptyState({ onCreate, filtered }: { onCreate: () => void;
         <p className="mt-1 max-w-sm text-sm text-vault-muted">
           {filtered
             ? "Try a different search term or clear the type filter."
-            : "Policies convert, route and cap credits automatically so nothing expires unused."}
+            : "Policies alert, route and cap spend automatically so nothing expires unused."}
         </p>
       </div>
       {!filtered && <PrimaryButton onClick={onCreate}>Create your first policy</PrimaryButton>}

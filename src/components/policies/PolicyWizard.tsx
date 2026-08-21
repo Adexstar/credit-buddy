@@ -43,7 +43,7 @@ export function PolicyWizard({
 }) {
   const editing = !!policy;
   const [step, setStep] = useState<1 | 2 | 3>(editing ? 2 : 1);
-  const [draft, setDraft] = useState<Policy>(policy ?? emptyPolicy("auto-convert"));
+  const [draft, setDraft] = useState<Policy>(policy ?? emptyPolicy("expiry-reminder"));
   const [saving, setSaving] = useState(false);
 
   const errors = useMemo(() => validatePolicy(draft), [draft]);
@@ -181,7 +181,7 @@ export function PolicyWizard({
               value={draft.name}
               maxLength={100}
               onChange={(e) => patch({ name: e.target.value })}
-              placeholder="Auto-convert before expiry"
+              placeholder="Expiry reminder"
             />
           </Field>
 

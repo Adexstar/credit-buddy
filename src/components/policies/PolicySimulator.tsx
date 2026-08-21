@@ -52,7 +52,7 @@ export function PolicySimulator({
       }
     >
       <div className="space-y-5">
-        {policy.type === "auto-convert" && (
+        {policy.type === "expiry-reminder" && (
           <>
             <Field label={`Days until expiry: ${scenario.daysToExpiry ?? 0}`}>
               <input

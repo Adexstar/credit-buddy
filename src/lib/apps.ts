@@ -80,8 +80,8 @@ let historyLog: ConnectionEvent[] = [];
 let pendingApps: ManagedApp[] = [];
 
 const SEED: Record<string, Partial<AppMeta> & { policies: string[] }> = {
-  "app-openai": { displayName: "My OpenAI Account", description: "Primary AI provider", connectedAt: daysAgo(14), policies: ["auto-convert", "off-peak"], syncFrequency: "6h" },
-  "app-claude": { displayName: "Claude Pro", description: "Long-context reasoning", connectedAt: daysAgo(13), policies: ["auto-convert"], syncFrequency: "12h" },
+  "app-openai": { displayName: "My OpenAI Account", description: "Primary AI provider", connectedAt: daysAgo(14), policies: ["expiry-reminder", "off-peak"], syncFrequency: "6h" },
+  "app-claude": { displayName: "Claude Pro", description: "Long-context reasoning", connectedAt: daysAgo(13), policies: ["expiry-reminder"], syncFrequency: "12h" },
   "app-midjourney": { displayName: "Midjourney Studio", description: "Image generation", connectedAt: daysAgo(40), policies: ["off-peak"], syncFrequency: "24h" },
   "app-replicate": { displayName: "Replicate Lab", description: "Model experiments", connectedAt: daysAgo(3), policies: [], syncFrequency: "6h" },
 };

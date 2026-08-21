@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowDownRight, ArrowUpRight, FileText, Repeat, Undo2, BarChart3 } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, FileText, Undo2, BarChart3 } from "lucide-react";
 import { creditsApi, type CreditTransaction } from "@/lib/credits";
 
 const PAGE_SIZE = 8;

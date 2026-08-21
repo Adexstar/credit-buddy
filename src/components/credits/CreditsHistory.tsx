@@ -7,7 +7,6 @@ const PAGE_SIZE = 8;
 const ICONS = {
   usage: BarChart3,
   addition: ArrowUpRight,
-  conversion: Repeat,
   reconciliation: FileText,
   refund: Undo2,
 } as const;
@@ -58,7 +57,6 @@ export function CreditsHistory({ bucketId, compact = false }: { bucketId?: strin
             <option value="all">All types</option>
             <option value="usage">Usage</option>
             <option value="addition">Addition</option>
-            <option value="conversion">Conversion</option>
             <option value="reconciliation">Reconciliation</option>
             <option value="refund">Refund</option>
           </select>

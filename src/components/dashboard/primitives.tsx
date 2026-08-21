@@ -204,7 +204,6 @@ export function BucketCard({ bucket, onSpendOptions }: { bucket: CreditBucket; o
 
 const kindLabels: Record<Activity["kind"], string> = {
   usage: "USA",
-  conversion: "CON",
   sync: "SYN",
   expiry: "EXP",
   topup: "ADD",

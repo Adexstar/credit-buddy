@@ -15,7 +15,7 @@ import { BucketDetailPanel } from "@/components/credits/BucketDetailPanel";
 import { SpendOptionsPanel } from "@/components/credits/SpendOptionsPanel";
 import { useCreditsManagement } from "@/hooks/useCreditsManagement";
 import { PROVIDERS } from "@/lib/mock-data";
-import { api, type ConnectedApp, type TimeRange, type UsageData } from "@/lib/api";
+import { api, type TimeRange, type UsageData } from "@/lib/api";
 import type { CreditBucket } from "@/lib/credits";
 
 export const Route = createFileRoute("/credits")({
@@ -48,7 +48,6 @@ function StatTile({ label, value }: { label: string; value: string }) {
 function CreditsPage() {
   const credits = useCreditsManagement();
   const [view, setView] = useState<"table" | "grid">("table");
-  const [apps, setApps] = useState<ConnectedApp[]>([]);
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [range, setRange] = useState<TimeRange>("7d");
   const [detail, setDetail] = useState<CreditBucket | null>(null);
@@ -56,10 +55,6 @@ function CreditsPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [deleteIds, setDeleteIds] = useState<string[] | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    void api.getApps().then(setApps);
-  }, []);
 
   useEffect(() => {
     void api.getUsage(range).then(setUsage);

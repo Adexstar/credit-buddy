@@ -162,7 +162,7 @@ function expiryTone(softExpiry: string) {
   return { label: "Active", bar: "bg-vault-teal", text: "text-vault-teal" };
 }
 
-export function BucketCard({ bucket, onConvert }: { bucket: CreditBucket; onConvert?: () => void }) {
+export function BucketCard({ bucket, onSpendOptions }: { bucket: CreditBucket; onSpendOptions?: () => void }) {
   const tone = expiryTone(bucket.softExpiry);
   const pct = Math.max(2, Math.min(100, (bucket.remaining / bucket.original) * 100));
 
@@ -189,10 +189,10 @@ export function BucketCard({ bucket, onConvert }: { bucket: CreditBucket; onConv
         </div>
         <button
           type="button"
-          onClick={onConvert}
+          onClick={onSpendOptions}
           className="shrink-0 rounded-lg border border-vault-border bg-vault-panel px-3 py-1.5 text-xs text-vault-muted transition hover:border-vault-teal/40 hover:text-vault-teal"
         >
-          Convert
+          Spend options
         </button>
       </div>
       <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-vault-panel">

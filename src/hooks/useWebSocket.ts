@@ -33,7 +33,7 @@ export function useWebSocket(handlers?: Partial<Record<RealtimeEvent, (payload: 
       "new_activity",
       "sync_started",
       "sync_completed",
-      "conversion_completed",
+      "bucket_expiring",
       "policy_triggered",
       "notification",
     ];

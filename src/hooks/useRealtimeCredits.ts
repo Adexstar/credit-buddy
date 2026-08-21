@@ -28,12 +28,12 @@ export function useRealtimeCredits(onUpdate?: (update: CreditUpdate) => void) {
       if (data?.appName) toast.success(`${data.appName} synced`);
     });
 
-    const offConversion = wsService.on("conversion_completed", (data: { receive?: number; toAppName?: string }) => {
+    const offExpiring = wsService.on("bucket_expiring", (data: { remaining?: number; appName?: string; days?: number }) => {
       window.dispatchEvent(new CustomEvent(CREDIT_UPDATE_EVENT, { detail: data }));
-      toast.success(
-        data?.receive && data?.toAppName
-          ? `Conversion complete — ${data.receive.toFixed(2)} credits in ${data.toAppName}`
-          : "Conversion complete",
+      toast.warning(
+        data?.remaining && data?.appName
+          ? `${data.remaining.toFixed(2)} ${data.appName} credits expire in ${data.days ?? 3} days`
+          : "Credits are expiring soon",
       );
     });
 
@@ -51,7 +51,7 @@ export function useRealtimeCredits(onUpdate?: (update: CreditUpdate) => void) {
     return () => {
       offCredit();
       offSync();
-      offConversion();
+      offExpiring();
       offPolicy();
       offNotification();
     };

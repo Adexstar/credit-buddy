@@ -7,7 +7,7 @@ import type { NotificationPrefs } from "@/lib/settings";
 
 const EMAIL_ROWS: { key: keyof NotificationPrefs["email"]; label: string; hint: string }[] = [
   { key: "lowBalance", label: "Low balance alerts", hint: "When a bucket drops below your threshold" },
-  { key: "conversions", label: "Conversion confirmations", hint: "Receipts for every credit conversion" },
+  { key: "expiryDigest", label: "Expiry digest", hint: "Weekly summary of credits about to expire" },
   { key: "syncUpdates", label: "Sync status updates", hint: "Daily digest of provider syncs" },
   { key: "marketing", label: "Marketing communications", hint: "Offers and partner news" },
   { key: "security", label: "Security alerts", hint: "Key rotations and new sign-ins" },
@@ -15,8 +15,8 @@ const EMAIL_ROWS: { key: keyof NotificationPrefs["email"]; label: string; hint: 
 ];
 
 const PUSH_ROWS: { key: keyof NotificationPrefs["push"]; label: string; hint: string }[] = [
-  { key: "expiring", label: "Credit expiring soon (3 days)", hint: "Last chance to convert or spend" },
-  { key: "conversions", label: "Auto-conversion triggered", hint: "When a policy moves credits for you" },
+  { key: "expiring", label: "Credit expiring soon (3 days)", hint: "Last chance to spend them with that provider" },
+  { key: "policyTriggers", label: "Policy triggered", hint: "When one of your rules fires" },
   { key: "dailySummary", label: "Daily usage summary", hint: "One push at 9am local time" },
   { key: "syncStatus", label: "Sync completed / failed", hint: "Per-provider sync outcome" },
 ];

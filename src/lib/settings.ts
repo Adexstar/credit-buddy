@@ -16,7 +16,7 @@ export interface Profile {
 export interface NotificationPrefs {
   email: {
     lowBalance: boolean;
-    conversions: boolean;
+    expiryDigest: boolean;
     syncUpdates: boolean;
     marketing: boolean;
     security: boolean;
@@ -24,7 +24,7 @@ export interface NotificationPrefs {
   };
   push: {
     expiring: boolean;
-    conversions: boolean;
+    policyTriggers: boolean;
     dailySummary: boolean;
     syncStatus: boolean;
   };
@@ -167,13 +167,13 @@ let profile: Profile = {
 let notifications: NotificationPrefs = {
   email: {
     lowBalance: true,
-    conversions: true,
+    expiryDigest: true,
     syncUpdates: true,
     marketing: false,
     security: true,
     updates: false,
   },
-  push: { expiring: true, conversions: true, dailySummary: false, syncStatus: true },
+  push: { expiring: true, policyTriggers: true, dailySummary: false, syncStatus: true },
   sms: { criticalAlerts: false, phone: "+1 (555) 123-4567", verified: false },
 };
 

@@ -8,7 +8,7 @@ export type TierFeature =
   | "custom_triggers"
   | "spend_ceiling"
   | "policy_groups"
-  | "smart_conversion"
+  | "expiry_forecast"
   | "orchestration"
   | "webhooks"
   | "policy_api"
@@ -21,8 +21,8 @@ export interface TierLimits {
   name: string;
   price: number;
   annualPrice: number;
-  /** Platform conversion fee as a fraction (0.1 = 10%). */
-  fee: number;
+  /** Bucket history retention in days. */
+  historyDays: number;
   maxPolicies: number;
   teamMembers: number;
   rollover: string;
@@ -38,7 +38,7 @@ const F = (on: TierFeature[]): Record<TierFeature, boolean> => {
     "custom_triggers",
     "spend_ceiling",
     "policy_groups",
-    "smart_conversion",
+    "expiry_forecast",
     "orchestration",
     "webhooks",
     "policy_api",
@@ -60,20 +60,20 @@ export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
     name: "Free",
     price: 0,
     annualPrice: 0,
-    fee: 0.1,
+    historyDays: 30,
     maxPolicies: 2,
     teamMembers: 1,
     rollover: "50%",
     support: "Email",
     features: F([]),
-    highlights: ["2 active policies", "10% conversion fee", "Email alerts", "50% credit rollover"],
+    highlights: ["2 active policies", "30 days of history", "Email alerts", "Expiry tracking for every bucket"],
   },
   premium: {
     id: "premium",
     name: "Premium",
     price: 5,
     annualPrice: 50,
-    fee: 0.08,
+    historyDays: 365,
     maxPolicies: 15,
     teamMembers: 3,
     rollover: "100%",
@@ -81,7 +81,7 @@ export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
     features: F(["push_notifications", "custom_triggers", "spend_ceiling", "policy_groups", "team_sharing"]),
     highlights: [
       "15 active policies",
-      "8% conversion fee",
+      "1 year of history",
       "Push notifications & custom triggers",
       "Spend ceilings + 3 team seats",
     ],
@@ -91,7 +91,7 @@ export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
     name: "Pro",
     price: 15,
     annualPrice: 150,
-    fee: 0.05,
+    historyDays: 1095,
     maxPolicies: UNLIMITED,
     teamMembers: UNLIMITED,
     rollover: "100%",
@@ -102,7 +102,7 @@ export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
       "custom_triggers",
       "spend_ceiling",
       "policy_groups",
-      "smart_conversion",
+      "expiry_forecast",
       "orchestration",
       "webhooks",
       "policy_api",
@@ -112,8 +112,8 @@ export const TIER_LIMITS: Record<PlanTier, TierLimits> = {
     ]),
     highlights: [
       "Unlimited policies & team",
-      "5% conversion fee",
-      "AI smart conversion + orchestration",
+      "3 years of history",
+      "Expiry forecasting + orchestration",
       "Webhooks, policy API, advanced analytics",
     ],
   },
@@ -129,8 +129,6 @@ export const tierName = (tier: PlanTier) => TIER_LIMITS[tier].name;
 
 export const hasFeature = (tier: PlanTier, feature: TierFeature) => TIER_LIMITS[tier].features[feature];
 
-export const platformFee = (tier: PlanTier) => TIER_LIMITS[tier].fee;
-
 export const maxPolicies = (tier: PlanTier) => TIER_LIMITS[tier].maxPolicies;
 
 export const canCreatePolicy = (tier: PlanTier, activeCount: number) => activeCount < maxPolicies(tier);
@@ -142,10 +140,9 @@ export function tierForFeature(feature: TierFeature): PlanTier {
   return TIER_ORDER.find((t) => TIER_LIMITS[t].features[feature]) ?? "pro";
 }
 
-/* Active tier — set once settings load, read by fee calculations outside React. */
+/* Active tier — set once settings load, read outside React. */
 let activeTier: PlanTier = "premium";
 export const setActiveTier = (tier: PlanTier) => {
   activeTier = tier;
 };
 export const getActiveTier = () => activeTier;
-export const activePlatformFee = () => platformFee(activeTier);

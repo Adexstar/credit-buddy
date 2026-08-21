@@ -21,7 +21,7 @@ import { ConnectAppModal } from "@/components/dashboard/ConnectAppModal";
 import { BatchSyncButton } from "@/components/dashboard/BatchSyncButton";
 import { SyncHistoryModal } from "@/components/dashboard/SyncHistory";
 import { useSync } from "@/hooks/useSync";
-import { CreditConversionModal } from "@/components/conversion/CreditConversionModal";
+import { SpendOptionsPanel } from "@/components/credits/SpendOptionsPanel";
 import { api, type Activity, type ConnectedApp, type CreditBucket, type Stats, type TimeRange, type UsageData } from "@/lib/api";
 import { mockUser } from "@/lib/mock-data";
 
@@ -50,7 +50,7 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [convertBucketId, setConvertBucketId] = useState<string | null>(null);
+  const [spendBucket, setSpendBucket] = useState<CreditBucket | null>(null);
   const [historyApp, setHistoryApp] = useState<ConnectedApp | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -178,7 +178,7 @@ function DashboardPage() {
                 done: apps.length > 0,
                 onClick: () => setModalOpen(true),
               },
-              { label: "Set a policy", hint: "Automate conversions", done: true },
+              { label: "Set a policy", hint: "Alerts and spend caps", done: true },
               { label: "Route a request", hint: "Send traffic through the proxy", done: false },
             ]}
           />
@@ -209,7 +209,7 @@ function DashboardPage() {
                       <BucketCard
                         key={bucket.id}
                         bucket={bucket}
-                        onConvert={() => setConvertBucketId(bucket.id)}
+                        onSpendOptions={() => setSpendBucket(bucket)}
                       />
                     ))}
                   </div>
@@ -240,15 +240,7 @@ function DashboardPage() {
         <SyncHistoryModal appId={historyApp.id} appName={historyApp.name} onClose={() => setHistoryApp(null)} />
       )}
 
-      <CreditConversionModal
-        isOpen={convertBucketId !== null}
-        onClose={() => setConvertBucketId(null)}
-        buckets={buckets}
-        apps={apps}
-        initialBucketId={convertBucketId ?? undefined}
-        onConverted={() => void load()}
-        onConnectApp={() => setModalOpen(true)}
-      />
+      {spendBucket && <SpendOptionsPanel bucket={spendBucket} onClose={() => setSpendBucket(null)} />}
 
       <ConnectAppModal
         isOpen={modalOpen}

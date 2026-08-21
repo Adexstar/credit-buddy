@@ -31,7 +31,7 @@ export interface CreditBucket {
 export interface CreditTransaction {
   id: string;
   bucketId: string;
-  type: "usage" | "addition" | "conversion" | "reconciliation" | "refund";
+  type: "usage" | "addition" | "reconciliation" | "refund";
   description: string;
   appName: string;
   amount: number;
@@ -41,7 +41,7 @@ export interface CreditTransaction {
 
 export interface Activity {
   id: string;
-  kind: "usage" | "conversion" | "sync" | "expiry" | "topup";
+  kind: "usage" | "sync" | "expiry" | "topup";
   message: string;
   appName: string;
   timestamp: string;
@@ -114,7 +114,7 @@ const txTemplates: Array<[CreditTransaction["type"], string, number]> = [
   ["usage", "Batch processing job", -25],
   ["usage", "API call", -5],
   ["addition", "Added credits", 100],
-  ["conversion", "Converted in from another bucket", 45],
+  ["addition", "Monthly subscription refill", 60],
   ["reconciliation", "Provider balance reconciliation", -2.35],
   ["usage", "Embedding batch", -8.4],
   ["refund", "Failed job refund", 3.2],
@@ -135,9 +135,9 @@ export const mockTransactions: CreditTransaction[] = mockBuckets.flatMap((bucket
 
 export const mockActivities: Activity[] = [
   { id: "a1", kind: "usage", message: "Used 12.5 credits on a GPT-4 completion", appName: "OpenAI", timestamp: hours(0.17), amount: -12.5 },
-  { id: "a2", kind: "conversion", message: "Converted 50 OpenAI credits into Claude credits", appName: "Claude", timestamp: hours(0.57), amount: 45 },
+  { id: "a2", kind: "expiry", message: "46.25 promo credits expire in 5 days — spend them in OpenAI", appName: "OpenAI", timestamp: hours(0.57) },
   { id: "a3", kind: "sync", message: "Balance synced with provider", appName: "Replicate", timestamp: hours(2.07) },
-  { id: "a4", kind: "expiry", message: "18 credits expire in 2 days — auto-convert queued", appName: "Midjourney", timestamp: hours(4.07) },
+  { id: "a4", kind: "expiry", message: "18 credits expire in 2 days — spend or lose them", appName: "Midjourney", timestamp: hours(4.07) },
   { id: "a5", kind: "topup", message: "Added 100 credits from promo code SPRINGAI", appName: "OpenAI", timestamp: hours(7.07), amount: 100 },
   { id: "a6", kind: "usage", message: "Batch render consumed 32 credits", appName: "Midjourney", timestamp: hours(19.07), amount: -32 },
 ];
@@ -163,8 +163,8 @@ export const mockUsage: Record<TimeRange, UsageData> = {
 export const mockPolicies: Policy[] = [
   {
     id: "p1",
-    name: "Auto-convert before expiry",
-    description: "Move credits to the highest-value app when a bucket nears its soft expiry.",
+    name: "Expiry reminder",
+    description: "Alert you while a bucket can still be spent inside its own provider.",
     scope: "All apps",
     trigger: "3 days before expiry",
     active: true,
@@ -208,6 +208,6 @@ export const mockStats: Stats = {
 export const routingRules = [
   "Spend from the bucket closest to its soft expiry first.",
   "Prefer peak-restricted buckets during off-peak hours.",
-  "Convert stranded credits once they drop under the conversion floor.",
+  "Flag stranded credits that cannot be spent before their soft expiry.",
   "Stop routing to any app that hits its monthly spend ceiling.",
 ];

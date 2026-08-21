@@ -2,11 +2,10 @@ import { PROVIDERS } from "./mock-data";
 import { TIER_LIMITS, type PlanTier, type TierFeature } from "./tiers";
 
 export type PolicyType =
-  | "auto-convert"
+  | "expiry-reminder"
   | "off-peak"
   | "alert"
   | "ceiling"
-  | "smart-convert"
   | "orchestration"
   | "webhook";
 export type NotifyChannel = "email" | "push" | "sms";
@@ -20,10 +19,8 @@ export interface PolicyBase {
   priority: number;
   createdAt: string;
   updatedAt: string;
-  /** auto-convert */
+  /** expiry-reminder */
   daysBeforeExpiry?: number;
-  targetAppId?: string;
-  conversionRate?: number;
   minRemaining?: number;
   /** off-peak */
   startTime?: string;
@@ -37,9 +34,6 @@ export interface PolicyBase {
   monthlyLimit?: number;
   resetDay?: number;
   blockExceeds?: boolean;
-  /** smart-convert (Pro) */
-  optimizeFor?: "value" | "expiry" | "usage";
-  minConfidence?: number;
   /** orchestration (Pro) */
   chainedPolicyIds?: string[];
   chainMode?: "sequential" | "parallel";
@@ -66,9 +60,9 @@ export const POLICY_TYPES: {
   feature?: TierFeature;
 }[] = [
   {
-    id: "auto-convert",
-    label: "Auto-convert before expiry",
-    blurb: "Move credits to the highest-value app before a bucket expires.",
+    id: "expiry-reminder",
+    label: "Expiry reminder",
+    blurb: "Alert you while there is still time to spend a bucket inside its own provider.",
     tone: "blue",
     requiredTier: "free",
   },
@@ -93,14 +87,6 @@ export const POLICY_TYPES: {
     tone: "danger",
     requiredTier: "premium",
     feature: "spend_ceiling",
-  },
-  {
-    id: "smart-convert",
-    label: "Smart conversion (AI)",
-    blurb: "Let the engine pick the best target app and timing for each conversion.",
-    tone: "green",
-    requiredTier: "pro",
-    feature: "smart_conversion",
   },
   {
     id: "orchestration",
@@ -158,7 +144,7 @@ export function scopeLabel(scope: Policy["scope"]) {
 
 export function triggerLabel(p: Policy): string {
   switch (p.type) {
-    case "auto-convert":
+    case "expiry-reminder":
       return `${p.daysBeforeExpiry ?? 3} days before expiry`;
     case "off-peak":
       return `${p.startTime ?? "22:00"} — ${p.endTime ?? "06:00"} ${p.timezone ?? "UTC"}`;
@@ -166,8 +152,6 @@ export function triggerLabel(p: Policy): string {
       return `$${(p.threshold ?? 0).toFixed(2)}`;
     case "ceiling":
       return `$${p.monthlyLimit ?? 0} / month`;
-    case "smart-convert":
-      return `Optimise for ${p.optimizeFor ?? "value"} (min confidence ${Math.round((p.minConfidence ?? 0.7) * 100)}%)`;
     case "orchestration":
       return `${(p.chainedPolicyIds ?? []).length} chained policies (${p.chainMode ?? "sequential"})`;
     case "webhook":
@@ -177,16 +161,14 @@ export function triggerLabel(p: Policy): string {
 
 export function actionLabel(p: Policy): string {
   switch (p.type) {
-    case "auto-convert":
-      return `Convert to ${appName(p.targetAppId ?? "claude")} at ${Math.round((p.conversionRate ?? 0.85) * 100)}%`;
+    case "expiry-reminder":
+      return `Notify via ${(p.channels ?? ["email"]).join(", ")} so the balance gets spent in time`;
     case "off-peak":
       return "Use peak-restricted buckets first";
     case "alert":
       return `Notify via ${(p.channels ?? ["email"]).join(", ")}`;
     case "ceiling":
       return p.blockExceeds ? "Block requests until next month" : "Warn only";
-    case "smart-convert":
-      return "Auto-select target app and convert at the best available rate";
     case "orchestration":
       return `Run chained policies ${p.chainMode ?? "sequential"}ly`;
     case "webhook":
@@ -205,12 +187,11 @@ export function emptyPolicy(type: PolicyType): Policy {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  if (type === "auto-convert")
-    return { ...base, daysBeforeExpiry: 3, targetAppId: "claude", conversionRate: 0.85, minRemaining: 0 };
+  if (type === "expiry-reminder")
+    return { ...base, daysBeforeExpiry: 3, minRemaining: 0, channels: ["email"], cooldownMinutes: 1440 };
   if (type === "off-peak") return { ...base, startTime: "22:00", endTime: "06:00", timezone: "UTC" };
   if (type === "alert") return { ...base, threshold: 100, channels: ["email"], cooldownMinutes: 60 };
   if (type === "ceiling") return { ...base, monthlyLimit: 250, resetDay: 1, blockExceeds: true };
-  if (type === "smart-convert") return { ...base, optimizeFor: "value", minConfidence: 0.7, minRemaining: 0 };
   if (type === "orchestration") return { ...base, chainedPolicyIds: [], chainMode: "sequential" };
   return { ...base, webhookUrl: "", webhookSecret: "", maxExecutionsPerDay: 50 };
 }
@@ -221,12 +202,10 @@ export function validatePolicy(p: Policy): string[] {
   if (name.length < 3) errors.push("Policy name must be at least 3 characters.");
   if (name.length > 100) errors.push("Policy name must be under 100 characters.");
   if (p.scope !== "all" && p.scope.length === 0) errors.push("Select at least one app.");
-  if (p.type === "auto-convert") {
+  if (p.type === "expiry-reminder") {
     if (!p.daysBeforeExpiry || p.daysBeforeExpiry < 1 || p.daysBeforeExpiry > 30)
       errors.push("Days before expiry must be between 1 and 30.");
-    if (!p.targetAppId) errors.push("Choose a target app.");
-    const rate = p.conversionRate ?? 0;
-    if (rate < 0.5 || rate > 1) errors.push("Conversion rate must be between 50% and 100%.");
+    if (!p.channels?.length) errors.push("Pick at least one notification channel.");
   }
   if (p.type === "off-peak") {
     const valid = (t?: string) => !!t && /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
@@ -241,10 +220,6 @@ export function validatePolicy(p: Policy): string[] {
     if (!p.monthlyLimit || p.monthlyLimit <= 0) errors.push("Monthly limit must be greater than 0.");
     const day = p.resetDay ?? 1;
     if (day < 1 || day > 28) errors.push("Reset day must be between 1 and 28.");
-  }
-  if (p.type === "smart-convert") {
-    const c = p.minConfidence ?? 0;
-    if (c < 0.5 || c > 1) errors.push("Minimum confidence must be between 50% and 100%.");
   }
   if (p.type === "orchestration" && !(p.chainedPolicyIds ?? []).length) {
     errors.push("Chain at least one policy.");
@@ -274,10 +249,9 @@ export interface SimulationResult {
 }
 
 export function defaultScenario(type: PolicyType): Scenario {
-  if (type === "auto-convert") return { daysToExpiry: 2, balance: 100 };
+  if (type === "expiry-reminder") return { daysToExpiry: 2, balance: 100 };
   if (type === "off-peak") return { currentTime: "23:30" };
   if (type === "alert") return { balance: 80 };
-  if (type === "smart-convert") return { daysToExpiry: 5, balance: 250 };
   if (type === "orchestration") return { balance: 120, daysToExpiry: 4 };
   if (type === "webhook") return { balance: 40 };
   return { usageThisMonth: 275 };
@@ -300,20 +274,20 @@ export function evaluatePolicy(policy: Policy, s: Scenario): SimulationResult {
   }
 
   switch (policy.type) {
-    case "auto-convert": {
+    case "expiry-reminder": {
       const days = s.daysToExpiry ?? 0;
       const limit = policy.daysBeforeExpiry ?? 3;
       const balance = s.balance ?? 0;
       const floor = policy.minRemaining ?? 0;
-      const rate = policy.conversionRate ?? 0.85;
       steps.push(`Days until expiry: ${days} (trigger at ${limit})`);
       steps.push(`Balance ${balance.toFixed(2)} vs minimum ${floor.toFixed(2)}`);
       const triggered = days <= limit && balance > floor;
-      const converted = balance * rate;
       return {
         triggered,
-        action: `Convert ${balance.toFixed(2)} credits to ${appName(policy.targetAppId ?? "claude")} at ${Math.round(rate * 100)}%`,
-        impact: `Result: ${converted.toFixed(2)} ${appName(policy.targetAppId ?? "claude")} credits`,
+        action: `Notify via ${(policy.channels ?? ["email"]).join(", ")}`,
+        impact: triggered
+          ? `${balance.toFixed(2)} credits still need to be spent inside this provider within ${days} day(s)`
+          : "No reminder needed yet",
         steps: [
           ...steps,
           triggered ? "Expiry window reached" : `Still ${days - limit} day(s) outside the window`,
@@ -361,23 +335,6 @@ export function evaluatePolicy(policy: Policy, s: Scenario): SimulationResult {
         steps: [...steps, triggered ? "Monthly limit exceeded" : "Below the monthly limit"],
       };
     }
-    case "smart-convert": {
-      const balance = s.balance ?? 0;
-      const days = s.daysToExpiry ?? 0;
-      const confidence = Math.min(1, 0.55 + (10 - Math.min(days, 10)) * 0.045);
-      const floor = policy.minConfidence ?? 0.7;
-      steps.push(`Optimising for ${policy.optimizeFor ?? "value"}`);
-      steps.push(`Model confidence ${Math.round(confidence * 100)}% vs minimum ${Math.round(floor * 100)}%`);
-      const triggered = confidence >= floor && balance > (policy.minRemaining ?? 0);
-      return {
-        triggered,
-        action: "Convert to the best-value app selected by the engine",
-        impact: triggered
-          ? `Projected ${(balance * 0.95).toFixed(2)} credits retained after fees`
-          : "Waiting for a higher-confidence window",
-        steps,
-      };
-    }
     case "orchestration": {
       const chained = policy.chainedPolicyIds ?? [];
       steps.push(`Chain mode: ${policy.chainMode ?? "sequential"}`);
@@ -413,15 +370,15 @@ const at = (iso: string) => iso;
 let store: Policy[] = [
   {
     id: "policy-1",
-    name: "Auto-convert before expiry",
-    type: "auto-convert",
+    name: "Expiry reminder",
+    type: "expiry-reminder",
     scope: "all",
     isActive: true,
     priority: 0,
     daysBeforeExpiry: 3,
-    targetAppId: "claude",
-    conversionRate: 0.85,
     minRemaining: 0,
+    channels: ["email"],
+    cooldownMinutes: 1440,
     createdAt: at("2026-08-01T10:00:00Z"),
     updatedAt: at("2026-08-03T14:30:00Z"),
     triggerCount: 31,

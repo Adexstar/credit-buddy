@@ -6,7 +6,7 @@ import { SectionHeader, SubHeading, Toggle } from "@/components/settings/Setting
 import { useSettings } from "@/hooks/useSettings";
 import { settingsApi } from "@/lib/settings";
 
-const DATA_TYPES = ["All data", "Credits", "Usage", "Conversions", "Sync history"];
+const DATA_TYPES = ["All data", "Credits", "Usage", "Sync history"];
 const RANGES = ["Last 7 days", "Last 30 days", "Last 90 days", "All time"];
 const FORMATS = ["CSV", "JSON", "XLSX"];
 
@@ -18,7 +18,7 @@ export function ExportSection() {
   const [include, setInclude] = useState({
     buckets: true,
     usage: true,
-    conversions: true,
+    policies: true,
     sync: true,
     personal: false,
   });
@@ -81,9 +81,9 @@ export function ExportSection() {
               onChange={(v) => setInclude({ ...include, usage: v })}
             />
             <Toggle
-              label="Conversion history"
-              checked={include.conversions}
-              onChange={(v) => setInclude({ ...include, conversions: v })}
+              label="Policy history"
+              checked={include.policies}
+              onChange={(v) => setInclude({ ...include, policies: v })}
             />
             <Toggle label="Sync history" checked={include.sync} onChange={(v) => setInclude({ ...include, sync: v })} />
             <Toggle

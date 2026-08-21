@@ -21,7 +21,7 @@ export const Route = createFileRoute("/policies")({
       { title: "Automation policies — Credit Bank" },
       {
         name: "description",
-        content: "Create, edit and test rules that convert, route and cap AI credits before they expire.",
+        content: "Create, edit and test rules that alert, route and cap AI credit spend before it expires.",
       },
       { property: "og:title", content: "Automation policies — Credit Bank" },
       { property: "og:description", content: "Rules that protect credits before they expire." },

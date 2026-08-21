@@ -12,7 +12,7 @@ const GROUPS: Group[] = [
     group: "Limits",
     rows: [
       { label: "Active policies", render: (t) => limitLabel(t.maxPolicies) },
-      { label: "Conversion fee", render: (t) => `${Math.round(t.fee * 100)}%` },
+      { label: "History retention", render: (t) => `${t.historyDays} days` },
       { label: "Credit rollover", render: (t) => t.rollover },
     ],
   },
@@ -22,7 +22,7 @@ const GROUPS: Group[] = [
       { label: "Spend ceilings", render: (t) => t.features.spend_ceiling },
       { label: "Custom triggers", render: (t) => t.features.custom_triggers },
       { label: "Policy groups", render: (t) => t.features.policy_groups },
-      { label: "Smart (AI) conversion", render: (t) => t.features.smart_conversion },
+      { label: "Expiry forecasting", render: (t) => t.features.expiry_forecast },
       { label: "Orchestration", render: (t) => t.features.orchestration },
       { label: "Priority execution", render: (t) => t.features.priority_execution },
     ],

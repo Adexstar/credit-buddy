@@ -3,11 +3,10 @@ import {
   Ban,
   Moon,
   Pencil,
-  RefreshCw,
+  Hourglass,
   Trash2,
   FlaskConical,
   GripVertical,
-  Sparkles,
   Workflow,
   Webhook,
 } from "lucide-react";
@@ -16,11 +15,10 @@ import { TierBadge } from "@/components/common/UpgradePrompt";
 import { TONE } from "./ui";
 
 const ICONS: Record<PolicyType, typeof Bell> = {
-  "auto-convert": RefreshCw,
+  "expiry-reminder": Hourglass,
   "off-peak": Moon,
   alert: Bell,
   ceiling: Ban,
-  "smart-convert": Sparkles,
   orchestration: Workflow,
   webhook: Webhook,
 };

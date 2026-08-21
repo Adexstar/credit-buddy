@@ -8,7 +8,7 @@ import {
   type Scenario,
   type SimulationResult,
 } from "@/lib/policies";
-import { platformFee, tierName, type PlanTier } from "@/lib/tiers";
+import { tierName, type PlanTier } from "@/lib/tiers";
 import { Field, GhostButton, Modal, PrimaryButton, inputClass } from "./ui";
 
 export function PolicySimulator({
@@ -97,7 +97,7 @@ export function PolicySimulator({
           </Field>
         )}
 
-        {(policy.type === "smart-convert" || policy.type === "orchestration") && (
+        {policy.type === "orchestration" && (
           <>
             <Field label={`Days until expiry: ${scenario.daysToExpiry ?? 0}`}>
               <input
@@ -167,8 +167,8 @@ export function PolicySimulator({
               </div>
             )}
             <p className="mt-3 text-xs text-vault-amber">
-              Conversion fee applied on your {tierName(tier)} plan: {Math.round(platformFee(tier) * 100)}%
-              {tier !== "pro" && " — Pro pays 5%."}
+              Simulated on your {tierName(tier)} plan — policies only alert, cap or report. They never move credits
+              between providers.
             </p>
             <div className="mt-3 text-xs text-vault-faint">
               Evaluation steps

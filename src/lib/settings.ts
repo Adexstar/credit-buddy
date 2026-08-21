@@ -131,7 +131,7 @@ export const PLANS = TIERS.map((tier) => ({
   name: tier.name,
   price: tier.price,
   annualPrice: tier.annualPrice,
-  fee: tier.fee,
+  historyDays: tier.historyDays,
   rollover: tier.rollover,
   policies: tier.maxPolicies >= 9999 ? "Unlimited" : `${tier.maxPolicies} max`,
   team: tier.teamMembers >= 9999 ? "Unlimited" : `${tier.teamMembers} seat${tier.teamMembers > 1 ? "s" : ""}`,
@@ -197,7 +197,7 @@ let billing: Billing = {
       periodEnd: iso(27),
       lines: [
         { label: "Premium plan — monthly", amount: 5 },
-        { label: "Conversion fees (8%)", amount: 0 },
+        { label: "Included usage", amount: 0 },
       ],
     },
     {
@@ -261,7 +261,7 @@ let apiKeys: ApiKey[] = [
 let exports: ExportFile[] = [
   { id: "ex_1", name: "credits_export.csv", size: "2.3 MB", createdAt: iso(-1), format: "CSV" },
   { id: "ex_2", name: "usage_export.csv", size: "1.1 MB", createdAt: iso(-2), format: "CSV" },
-  { id: "ex_3", name: "conversions_export.csv", size: "456 KB", createdAt: iso(-5), format: "CSV" },
+  { id: "ex_3", name: "expiry_report.csv", size: "456 KB", createdAt: iso(-5), format: "CSV" },
 ];
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));

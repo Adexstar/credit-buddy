@@ -135,7 +135,7 @@ export function DangerSection() {
       <SubHeading>Clear all data</SubHeading>
       <DangerCard
         title="This will permanently delete:"
-        body={["All credit buckets", "All usage history", "All conversion records", "All policy settings"]}
+        body={["All credit buckets", "All usage history", "All policy settings"]}
         action={<DangerButton onClick={() => setConfirm("data")}>Clear all data</DangerButton>}
       />
 

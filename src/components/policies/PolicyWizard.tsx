@@ -167,7 +167,7 @@ export function PolicyWizard({
           })}
           <UpgradePrompt
             requiredTier={tier === "free" ? "premium" : "pro"}
-            reason={`You are on the ${tierName(tier)} plan. Higher tiers unlock spend ceilings, AI conversion, orchestration and webhooks.`}
+            reason={`You are on the ${tierName(tier)} plan. Higher tiers unlock spend ceilings, orchestration and webhooks.`}
             compact
           />
         </div>
@@ -232,7 +232,7 @@ export function PolicyWizard({
             </div>
           </Field>
 
-          {draft.type === "auto-convert" && (
+          {draft.type === "expiry-reminder" && (
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label={`Days before expiry: ${draft.daysBeforeExpiry ?? 3}`}>
                 {customTriggers ? (
@@ -263,30 +263,7 @@ export function PolicyWizard({
                   </div>
                 )}
               </Field>
-              <Field label="Target app">
-                <select
-                  className={inputClass}
-                  value={draft.targetAppId ?? ""}
-                  onChange={(e) => patch({ targetAppId: e.target.value })}
-                >
-                  {APP_OPTIONS.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label={`Conversion rate: ${Math.round((draft.conversionRate ?? 0.85) * 100)}%`}>
-                <input
-                  type="range"
-                  min={50}
-                  max={100}
-                  value={Math.round((draft.conversionRate ?? 0.85) * 100)}
-                  onChange={(e) => patch({ conversionRate: Number(e.target.value) / 100 })}
-                  className="w-full accent-vault-teal"
-                />
-              </Field>
-              <Field label="Only convert above (credits)">
+              <Field label="Only alert above (credits)">
                 <input
                   type="number"
                   min={0}
@@ -446,40 +423,6 @@ export function PolicyWizard({
             </div>
           )}
 
-          {draft.type === "smart-convert" && (
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Optimise for">
-                <select
-                  className={inputClass}
-                  value={draft.optimizeFor ?? "value"}
-                  onChange={(e) => patch({ optimizeFor: e.target.value as Policy["optimizeFor"] })}
-                >
-                  <option value="value">Highest value</option>
-                  <option value="expiry">Soonest expiry</option>
-                  <option value="usage">Actual usage patterns</option>
-                </select>
-              </Field>
-              <Field label={`Minimum confidence: ${Math.round((draft.minConfidence ?? 0.7) * 100)}%`}>
-                <input
-                  type="range"
-                  min={50}
-                  max={100}
-                  value={Math.round((draft.minConfidence ?? 0.7) * 100)}
-                  onChange={(e) => patch({ minConfidence: Number(e.target.value) / 100 })}
-                  className="w-full accent-vault-teal"
-                />
-              </Field>
-              <Field label="Only convert above (credits)">
-                <input
-                  type="number"
-                  min={0}
-                  className={inputClass}
-                  value={draft.minRemaining ?? 0}
-                  onChange={(e) => patch({ minRemaining: Number(e.target.value) })}
-                />
-              </Field>
-            </div>
-          )}
 
           {draft.type === "orchestration" && (
             <div className="space-y-4">

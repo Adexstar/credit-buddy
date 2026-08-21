@@ -65,12 +65,12 @@ export function ChangePlanModal({
             Active policies above {limitLabel(TIER_LIMITS[selected].maxPolicies)} will be paused.
           </li>
           <li>
-            Policy types and channels not in {TIER_LIMITS[selected].name} stop running (spend ceilings, AI conversion,
+            Policy types and channels not in {TIER_LIMITS[selected].name} stop running (spend ceilings, expiry forecasting,
             orchestration, webhooks, SMS).
           </li>
           <li>
-            Team seats above {limitLabel(TIER_LIMITS[selected].teamMembers)} lose access, and your conversion fee rises
-            to {Math.round(TIER_LIMITS[selected].fee * 100)}%.
+            Team seats above {limitLabel(TIER_LIMITS[selected].teamMembers)} lose access, and history retention drops to{" "}
+            {TIER_LIMITS[selected].historyDays} days.
           </li>
         </ul>
       )}
@@ -199,7 +199,7 @@ export function BillingSection() {
         {[
           ["Active policies", `${limitLabel(TIER_LIMITS[billing.plan].maxPolicies)} allowed`],
           ["Team seats", `${limitLabel(TIER_LIMITS[billing.plan].teamMembers)} allowed`],
-          ["Conversion fee", `${Math.round(TIER_LIMITS[billing.plan].fee * 100)}%`],
+          ["History retention", `${TIER_LIMITS[billing.plan].historyDays} days`],
         ].map(([label, value]) => (
           <div key={label} className="rounded-xl border border-vault-border bg-vault-bg/40 p-4">
             <p className="text-xs text-vault-faint">{label}</p>

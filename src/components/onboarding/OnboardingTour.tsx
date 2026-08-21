@@ -41,7 +41,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     id: "activity",
     title: "Recent activity",
-    description: "Usage, conversions and syncs stream in here as they happen.",
+    description: "Usage, expiry warnings and syncs stream in here as they happen.",
     target: "recent-activity",
     side: "top",
   },
